@@ -1,0 +1,36 @@
+# Binaries
+ripchords
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of `go env GOPATH`/bin
+/vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Coverage output
+*.out
+coverage.html
+
+# Dependency directories
+vendor/
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/settings.local.json
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
