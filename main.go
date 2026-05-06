@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 const numStrings = 6
@@ -21,6 +23,11 @@ const (
 
 type Config struct {
 	InputOrder InputOrder `json:"input_order,omitempty"`
+}
+
+type Chord struct {
+	name  string
+	frets []int
 }
 
 // stringNames in display order: highest pitch (e) first, lowest (E) last.
@@ -123,7 +130,7 @@ func detectBarre(frets []int) int {
 	return 0
 }
 
-// renderChord returns an ASCII tab diagram. frets must be in pitch order.
+// renderChord returns an ASCII tab diagram for a single chord. frets must be in pitch order.
 func renderChord(name string, frets []int) string {
 	var sb strings.Builder
 	if name != "" {
@@ -152,10 +159,145 @@ func renderChord(name string, frets []int) string {
 	return sb.String()
 }
 
+// centerInWidth centers s within a field of w chars, truncating if s is too long.
+func centerInWidth(s string, w int) string {
+	if len(s) >= w {
+		return s[:w]
+	}
+	total := w - len(s)
+	left := total / 2
+	right := total - left
+	return strings.Repeat(" ", left) + s + strings.Repeat(" ", right)
+}
+
+// renderProgression renders chords side-by-side, wrapping rows to fit within width.
+// Each segment is 14 chars wide ("|-----0------|") with a 1-space gap between chords.
+// Total row width for N chords: 2 (label) + 14*N + (N-1) = 15N+1.
+func renderProgression(chords []Chord, width int) string {
+	const segWidth = 14 // "|-----0------|"
+	const colWidth = 15 // segWidth + 1 space separator
+
+	chordsPerRow := (width - 1) / colWidth
+	if chordsPerRow < 1 {
+		chordsPerRow = 1
+	}
+
+	var sb strings.Builder
+	for start := 0; start < len(chords); start += chordsPerRow {
+		end := start + chordsPerRow
+		if end > len(chords) {
+			end = len(chords)
+		}
+		row := chords[start:end]
+
+		// Name row: center each name within its 14-char column.
+		sb.WriteString("  ")
+		for i, ch := range row {
+			centered := centerInWidth(ch.name, segWidth)
+			sb.WriteString(centered)
+			if i < len(row)-1 {
+				sb.WriteString(" ")
+			}
+		}
+		sb.WriteString("\n")
+
+		// String rows.
+		for display := 0; display < numStrings; display++ {
+			pitchIdx := numStrings - 1 - display
+			label := stringNames[display]
+			sb.WriteString(label + " ")
+			for i, ch := range row {
+				fret := ch.frets[pitchIdx]
+				barre := detectBarre(ch.frets)
+				var marker string
+				switch {
+				case fret == -1:
+					marker = "X"
+				case fret == 0:
+					marker = "0"
+				default:
+					marker = strconv.Itoa(fret)
+				}
+				var seg string
+				if barre > 0 && fret > 0 {
+					seg = "|---|-" + marker + "------|"
+				} else {
+					seg = "|-----" + marker + "------|"
+				}
+				sb.WriteString(seg)
+				if i < len(row)-1 {
+					sb.WriteString(" ")
+				}
+			}
+			sb.WriteString("\n")
+		}
+
+		if end < len(chords) {
+			sb.WriteString("\n")
+		}
+	}
+	return sb.String()
+}
+
+func terminalSize() (width, height int) {
+	w, h, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil || w <= 0 {
+		return 80, 24
+	}
+	return w, h
+}
+
+// paginate prints text one screenful at a time when output is a terminal.
+func paginate(text string, linesPerPage int, scanner *bufio.Scanner) {
+	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
+	if !term.IsTerminal(int(os.Stdout.Fd())) || linesPerPage < 1 || len(lines) <= linesPerPage {
+		fmt.Print(text)
+		if !strings.HasSuffix(text, "\n") {
+			fmt.Println()
+		}
+		return
+	}
+	start := 0
+	for start < len(lines) {
+		end := start + linesPerPage
+		if end > len(lines) {
+			end = len(lines)
+		}
+		fmt.Println(strings.Join(lines[start:end], "\n"))
+		start = end
+		if start < len(lines) {
+			fmt.Print("-- more -- (Enter to continue, q to quit) ")
+			scanner.Scan()
+			if strings.ToLower(strings.TrimSpace(scanner.Text())) == "q" {
+				fmt.Println()
+				break
+			}
+			fmt.Println()
+		}
+	}
+}
+
 func prompt(scanner *bufio.Scanner, msg string) string {
 	fmt.Print(msg)
 	scanner.Scan()
 	return strings.TrimSpace(scanner.Text())
+}
+
+// promptFrets loops until the user enters valid fret positions or "quit".
+// Returns (frets, true) on success, (nil, false) if the user typed "quit".
+func promptFrets(scanner *bufio.Scanner, cfg Config) ([]int, bool) {
+	for {
+		input := prompt(scanner, "Fret positions: ")
+		if strings.ToLower(input) == "quit" {
+			return nil, false
+		}
+		frets, err := parseFrets(input, cfg.InputOrder)
+		if err != nil {
+			fmt.Printf("Invalid input: %s\nPlease try again.\n\n", err)
+			continue
+		}
+		return frets, true
+	}
 }
 
 func main() {
@@ -194,6 +336,9 @@ func main() {
 	fmt.Println()
 
 	for {
+		var progression []Chord
+
+		// --- first chord ---
 		name := prompt(scanner, "Chord name (or press Enter to skip): ")
 		switch strings.ToLower(name) {
 		case "quit":
@@ -212,34 +357,67 @@ func main() {
 			continue
 		}
 
-		var frets []int
+		frets, ok := promptFrets(scanner, cfg)
+		if !ok {
+			fmt.Println("Goodbye!")
+			return
+		}
+		progression = append(progression, Chord{name: name, frets: frets})
+
+		// --- additional chords ---
+	moreChords:
 		for {
-			input := prompt(scanner, "Fret positions: ")
-			if strings.ToLower(input) == "quit" {
+			fmt.Println()
+			answer := prompt(scanner, "Another chord? (chord positions, yes, or no): ")
+			lower := strings.ToLower(strings.TrimSpace(answer))
+
+			switch lower {
+			case "quit":
 				fmt.Println("Goodbye!")
 				return
+			case "", "n", "no", "done":
+				break moreChords
+			case "y", "yes":
+				chordName := prompt(scanner, "Chord name (or press Enter to skip): ")
+				if strings.ToLower(chordName) == "quit" {
+					fmt.Println("Goodbye!")
+					return
+				}
+				f, ok := promptFrets(scanner, cfg)
+				if !ok {
+					fmt.Println("Goodbye!")
+					return
+				}
+				progression = append(progression, Chord{name: chordName, frets: f})
+			default:
+				// Treat direct fret input as "yes + chord" with no name.
+				f, err := parseFrets(answer, cfg.InputOrder)
+				if err != nil {
+					fmt.Println("Not understood. Enter chord positions, 'yes', or 'no'.")
+					continue
+				}
+				progression = append(progression, Chord{frets: f})
 			}
-			var err error
-			frets, err = parseFrets(input, cfg.InputOrder)
-			if err != nil {
-				fmt.Printf("Invalid input: %s\nPlease try again.\n\n", err)
-				continue
-			}
-			break
 		}
 
-		diagram := renderChord(name, frets)
+		// --- render and display ---
+		width, height := terminalSize()
+		if width > 80 {
+			width = 80
+		}
+		output := renderProgression(progression, width)
 		fmt.Println()
-		fmt.Print(diagram)
+		paginate(output, height-3, scanner)
 		fmt.Println()
 
+		// --- save to file ---
 		saveFile := prompt(scanner, "Save to file? (Enter filename, or press Enter to skip): ")
 		if saveFile != "" {
 			f, err := os.OpenFile(saveFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 			if err != nil {
 				fmt.Printf("Could not open file: %s\n\n", err)
 			} else {
-				fmt.Fprint(f, diagram)
+				fmt.Fprint(f, renderProgression(progression, 80))
 				fmt.Fprintln(f)
 				f.Close()
 				fmt.Printf("Appended to %s\n\n", saveFile)
