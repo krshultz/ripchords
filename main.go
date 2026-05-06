@@ -390,13 +390,28 @@ func main() {
 				}
 				progression = append(progression, Chord{name: chordName, frets: f})
 			default:
-				// Treat direct fret input as "yes + chord" with no name.
+				// Direct fret positions: ask for name, then add.
+				// Chord name typed directly: use it as the name, then ask for frets.
 				f, err := parseFrets(answer, cfg.InputOrder)
+				var chordName string
 				if err != nil {
-					fmt.Println("Not understood. Enter chord positions, 'yes', or 'no'.")
-					continue
+					// Not fret positions — treat the input as a chord name.
+					chordName = answer
+				} else {
+					chordName = prompt(scanner, "Chord name (or press Enter to skip): ")
+					if strings.ToLower(chordName) == "quit" {
+						fmt.Println("Goodbye!")
+						return
+					}
 				}
-				progression = append(progression, Chord{frets: f})
+				if f == nil {
+					f, ok = promptFrets(scanner, cfg)
+					if !ok {
+						fmt.Println("Goodbye!")
+						return
+					}
+				}
+				progression = append(progression, Chord{name: chordName, frets: f})
 			}
 		}
 
