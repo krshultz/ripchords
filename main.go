@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,8 @@ import (
 
 	"ripchords/chord"
 )
+
+var version = "dev"
 
 type Config struct {
 	InputOrder chord.InputOrder `json:"input_order,omitempty"`
@@ -104,6 +107,15 @@ func promptFrets(scanner *bufio.Scanner, cfg Config) ([]int, bool) {
 }
 
 func main() {
+	var showVersion bool
+	flag.BoolVar(&showVersion, "version", false, "print version and exit")
+	flag.BoolVar(&showVersion, "v", false, "print version and exit")
+	flag.Parse()
+	if showVersion {
+		fmt.Printf("Ripchords CLI %s - software for guitar players\n", version)
+		return
+	}
+
 	scanner := bufio.NewScanner(os.Stdin)
 	cfg := loadConfig()
 
