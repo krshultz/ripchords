@@ -94,7 +94,7 @@ func prompt(scanner *bufio.Scanner, msg string) string {
 func promptFrets(scanner *bufio.Scanner, cfg Config) ([]int, bool) {
 	for {
 		input := prompt(scanner, "Fret positions: ")
-		if strings.ToLower(input) == "quit" {
+		if input == "" || strings.ToLower(input) == "quit" {
 			return nil, false
 		}
 		frets, err := chord.ParseFrets(input, cfg.InputOrder)
@@ -183,7 +183,7 @@ func main() {
 	moreChords:
 		for {
 			fmt.Println()
-			answer := prompt(scanner, "Another chord? (chord positions, yes, or no): ")
+			answer := prompt(scanner, "Another chord? (chord name, fret positions, or no): ")
 			lower := strings.ToLower(strings.TrimSpace(answer))
 
 			switch lower {
