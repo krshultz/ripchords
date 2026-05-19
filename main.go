@@ -3,35 +3,22 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"golang.org/x/term"
+
+	"ripchords/chord"
 )
 
-const numStrings = 6
-
-type InputOrder string
-
-const (
-	PitchOrder  InputOrder = "pitch"
-	StringOrder InputOrder = "string_number"
-)
+var version = "dev"
 
 type Config struct {
-	InputOrder InputOrder `json:"input_order,omitempty"`
+	InputOrder chord.InputOrder `json:"input_order,omitempty"`
 }
-
-type Chord struct {
-	name  string
-	frets []int
-}
-
-// stringNames in display order: highest pitch (e) first, lowest (E) last.
-var stringNames = [numStrings]string{"e", "B", "G", "D", "A", "E"}
 
 func configPath() string {
 	home, err := os.UserHomeDir()
@@ -56,187 +43,6 @@ func saveConfig(cfg Config) {
 	os.MkdirAll(filepath.Dir(path), 0755) //nolint
 	data, _ := json.MarshalIndent(cfg, "", "  ")
 	os.WriteFile(path, data, 0644) //nolint
-}
-
-// tokenize splits input into per-string tokens.
-// If the input contains spaces it splits on whitespace; otherwise each character is one token.
-func tokenize(input string) []string {
-	input = strings.TrimSpace(input)
-	if strings.ContainsAny(input, " \t") {
-		return strings.Fields(input)
-	}
-	tokens := make([]string, 0, len(input))
-	for _, ch := range input {
-		tokens = append(tokens, string(ch))
-	}
-	return tokens
-}
-
-// parseFrets parses a fret-position string and returns values in pitch order
-// (index 0 = string 6 = low E, index 5 = string 1 = high e).
-// -1 means muted/not played.
-func parseFrets(input string, order InputOrder) ([]int, error) {
-	tokens := tokenize(input)
-	if len(tokens) != numStrings {
-		return nil, fmt.Errorf(
-			"expected %d string positions, got %d\n  (e.g. \"x 3 2 0 1 0\" or \"x32010\" for C major)",
-			numStrings, len(tokens),
-		)
-	}
-	frets := make([]int, numStrings)
-	for i, tok := range tokens {
-		if strings.ToLower(tok) == "x" {
-			frets[i] = -1
-			continue
-		}
-		n, err := strconv.Atoi(tok)
-		if err != nil {
-			return nil, fmt.Errorf("position %d: %q is not a valid fret number or 'x'", i+1, tok)
-		}
-		if n < 0 || n > 24 {
-			return nil, fmt.Errorf("position %d: fret %d is out of range (valid: 0–24)", i+1, n)
-		}
-		frets[i] = n
-	}
-	if order == StringOrder {
-		// String-number order arrives as [string1…string6] = [e…E]; reverse to pitch order [E…e].
-		for i, j := 0, numStrings-1; i < j; i, j = i+1, j-1 {
-			frets[i], frets[j] = frets[j], frets[i]
-		}
-	}
-	return frets, nil
-}
-
-// detectBarre returns the barre fret if 3+ strings share the minimum fretted position, else 0.
-func detectBarre(frets []int) int {
-	minFret := 0
-	for _, f := range frets {
-		if f > 0 && (minFret == 0 || f < minFret) {
-			minFret = f
-		}
-	}
-	if minFret == 0 {
-		return 0
-	}
-	count := 0
-	for _, f := range frets {
-		if f == minFret {
-			count++
-		}
-	}
-	if count >= 3 {
-		return minFret
-	}
-	return 0
-}
-
-// renderChord returns an ASCII tab diagram for a single chord. frets must be in pitch order.
-func renderChord(name string, frets []int) string {
-	var sb strings.Builder
-	if name != "" {
-		sb.WriteString(fmt.Sprintf("    %s\n", name))
-	}
-	barre := detectBarre(frets)
-	for display := 0; display < numStrings; display++ {
-		pitchIdx := numStrings - 1 - display // display 0 (e) = pitch index 5
-		label := stringNames[display]
-		fret := frets[pitchIdx]
-		var marker string
-		switch {
-		case fret == -1:
-			marker = "X"
-		case fret == 0:
-			marker = "0"
-		default:
-			marker = strconv.Itoa(fret)
-		}
-		if barre > 0 && fret > 0 {
-			sb.WriteString(label + " |---|-" + marker + "------|\n")
-		} else {
-			sb.WriteString(label + " |-----" + marker + "------|\n")
-		}
-	}
-	return sb.String()
-}
-
-// centerInWidth centers s within a field of w chars, truncating if s is too long.
-func centerInWidth(s string, w int) string {
-	if len(s) >= w {
-		return s[:w]
-	}
-	total := w - len(s)
-	left := total / 2
-	right := total - left
-	return strings.Repeat(" ", left) + s + strings.Repeat(" ", right)
-}
-
-// renderProgression renders chords side-by-side, wrapping rows to fit within width.
-// Each segment is 14 chars wide ("|-----0------|") with a 1-space gap between chords.
-// Total row width for N chords: 2 (label) + 14*N + (N-1) = 15N+1.
-func renderProgression(chords []Chord, width int) string {
-	const segWidth = 14 // "|-----0------|"
-	const colWidth = 15 // segWidth + 1 space separator
-
-	chordsPerRow := (width - 1) / colWidth
-	if chordsPerRow < 1 {
-		chordsPerRow = 1
-	}
-
-	var sb strings.Builder
-	for start := 0; start < len(chords); start += chordsPerRow {
-		end := start + chordsPerRow
-		if end > len(chords) {
-			end = len(chords)
-		}
-		row := chords[start:end]
-
-		// Name row: center each name within its 14-char column.
-		sb.WriteString("  ")
-		for i, ch := range row {
-			centered := centerInWidth(ch.name, segWidth)
-			sb.WriteString(centered)
-			if i < len(row)-1 {
-				sb.WriteString(" ")
-			}
-		}
-		sb.WriteString("\n")
-
-		// String rows.
-		for display := 0; display < numStrings; display++ {
-			pitchIdx := numStrings - 1 - display
-			label := stringNames[display]
-			sb.WriteString(label + " ")
-			for i, ch := range row {
-				fret := ch.frets[pitchIdx]
-				barre := detectBarre(ch.frets)
-				var marker string
-				switch {
-				case fret == -1:
-					marker = "X"
-				case fret == 0:
-					marker = "0"
-				default:
-					marker = strconv.Itoa(fret)
-				}
-				var seg string
-				if barre > 0 && fret > 0 {
-					seg = "|---|-" + marker + "------|"
-				} else {
-					seg = "|-----" + marker + "------|"
-				}
-				sb.WriteString(seg)
-				if i < len(row)-1 {
-					sb.WriteString(" ")
-				}
-			}
-			sb.WriteString("\n")
-		}
-
-		if end < len(chords) {
-			sb.WriteString("\n")
-		}
-	}
-	return sb.String()
 }
 
 func terminalSize() (width, height int) {
@@ -288,10 +94,10 @@ func prompt(scanner *bufio.Scanner, msg string) string {
 func promptFrets(scanner *bufio.Scanner, cfg Config) ([]int, bool) {
 	for {
 		input := prompt(scanner, "Fret positions: ")
-		if strings.ToLower(input) == "quit" {
+		if input == "" || strings.ToLower(input) == "quit" {
 			return nil, false
 		}
-		frets, err := parseFrets(input, cfg.InputOrder)
+		frets, err := chord.ParseFrets(input, cfg.InputOrder)
 		if err != nil {
 			fmt.Printf("Invalid input: %s\nPlease try again.\n\n", err)
 			continue
@@ -301,6 +107,15 @@ func promptFrets(scanner *bufio.Scanner, cfg Config) ([]int, bool) {
 }
 
 func main() {
+	var showVersion bool
+	flag.BoolVar(&showVersion, "version", false, "print version and exit")
+	flag.BoolVar(&showVersion, "v", false, "print version and exit")
+	flag.Parse()
+	if showVersion {
+		fmt.Printf("Ripchords CLI %s - software for guitar players\n", version)
+		return
+	}
+
 	scanner := bufio.NewScanner(os.Stdin)
 	cfg := loadConfig()
 
@@ -314,9 +129,9 @@ func main() {
 			choice := prompt(scanner, "Enter 1 or 2: ")
 			switch choice {
 			case "1":
-				cfg.InputOrder = PitchOrder
+				cfg.InputOrder = chord.PitchOrder
 			case "2":
-				cfg.InputOrder = StringOrder
+				cfg.InputOrder = chord.StringOrder
 			default:
 				fmt.Println("Please enter 1 or 2.")
 				continue
@@ -328,7 +143,7 @@ func main() {
 	}
 
 	orderLabel := "pitch order (E A D G B e)"
-	if cfg.InputOrder == StringOrder {
+	if cfg.InputOrder == chord.StringOrder {
 		orderLabel = "string-number order (string 1–6: e B G D A E)"
 	}
 	fmt.Printf("ripchords — entering frets in %s\n", orderLabel)
@@ -336,7 +151,7 @@ func main() {
 	fmt.Println()
 
 	for {
-		var progression []Chord
+		var progression []chord.Chord
 
 		// --- first chord ---
 		name := prompt(scanner, "Chord name (or press Enter to skip): ")
@@ -345,11 +160,11 @@ func main() {
 			fmt.Println("Goodbye!")
 			return
 		case "order":
-			if cfg.InputOrder == PitchOrder {
-				cfg.InputOrder = StringOrder
+			if cfg.InputOrder == chord.PitchOrder {
+				cfg.InputOrder = chord.StringOrder
 				fmt.Println("Switched to string-number order (string 1–6: e B G D A E)")
 			} else {
-				cfg.InputOrder = PitchOrder
+				cfg.InputOrder = chord.PitchOrder
 				fmt.Println("Switched to pitch order (E A D G B e)")
 			}
 			saveConfig(cfg)
@@ -362,13 +177,13 @@ func main() {
 			fmt.Println("Goodbye!")
 			return
 		}
-		progression = append(progression, Chord{name: name, frets: frets})
+		progression = append(progression, chord.Chord{Name: name, Frets: frets})
 
 		// --- additional chords ---
 	moreChords:
 		for {
 			fmt.Println()
-			answer := prompt(scanner, "Another chord? (chord positions, yes, or no): ")
+			answer := prompt(scanner, "Another chord? (chord name, fret positions, or no): ")
 			lower := strings.ToLower(strings.TrimSpace(answer))
 
 			switch lower {
@@ -388,11 +203,11 @@ func main() {
 					fmt.Println("Goodbye!")
 					return
 				}
-				progression = append(progression, Chord{name: chordName, frets: f})
+				progression = append(progression, chord.Chord{Name: chordName, Frets: f})
 			default:
 				// Direct fret positions: ask for name, then add.
 				// Chord name typed directly: use it as the name, then ask for frets.
-				f, err := parseFrets(answer, cfg.InputOrder)
+				f, err := chord.ParseFrets(answer, cfg.InputOrder)
 				var chordName string
 				if err != nil {
 					// Not fret positions — treat the input as a chord name.
@@ -411,7 +226,7 @@ func main() {
 						return
 					}
 				}
-				progression = append(progression, Chord{name: chordName, frets: f})
+				progression = append(progression, chord.Chord{Name: chordName, Frets: f})
 			}
 		}
 
@@ -420,7 +235,7 @@ func main() {
 		if width > 80 {
 			width = 80
 		}
-		output := renderProgression(progression, width)
+		output := chord.RenderProgression(progression, width)
 		fmt.Println()
 		paginate(output, height-3, scanner)
 		fmt.Println()
@@ -432,7 +247,7 @@ func main() {
 			if err != nil {
 				fmt.Printf("Could not open file: %s\n\n", err)
 			} else {
-				fmt.Fprint(f, renderProgression(progression, 80))
+				fmt.Fprint(f, chord.RenderProgression(progression, 80))
 				fmt.Fprintln(f)
 				f.Close()
 				fmt.Printf("Appended to %s\n\n", saveFile)

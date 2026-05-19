@@ -1,4 +1,4 @@
-package main
+package chord
 
 import (
 	"strings"
@@ -31,7 +31,7 @@ func TestTokenize(t *testing.T) {
 
 func TestParseFretsPitchOrder(t *testing.T) {
 	// C chord pitch order: x 3 2 0 1 0 → E=muted, A=3, D=2, G=0, B=1, e=0
-	frets, err := parseFrets("x 3 2 0 1 0", PitchOrder)
+	frets, err := ParseFrets("x 3 2 0 1 0", PitchOrder)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestParseFretsPitchOrder(t *testing.T) {
 
 func TestParseFretsPitchOrderSpaceless(t *testing.T) {
 	// Same as above but spaceless
-	frets, err := parseFrets("x32010", PitchOrder)
+	frets, err := ParseFrets("x32010", PitchOrder)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestParseFretsPitchOrderSpaceless(t *testing.T) {
 func TestParseFretsStringOrder(t *testing.T) {
 	// C chord string-number order: 0 1 0 2 3 x → string1(e)=0, 2(B)=1, 3(G)=0, 4(D)=2, 5(A)=3, 6(E)=x
 	// In pitch order: [E=-1, A=3, D=2, G=0, B=1, e=0]
-	frets, err := parseFrets("0 1 0 2 3 x", StringOrder)
+	frets, err := ParseFrets("0 1 0 2 3 x", StringOrder)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -83,13 +83,13 @@ func TestParseFretsErrors(t *testing.T) {
 		{"1 2 25 4 5 6", "out of range"},
 	}
 	for _, tt := range tests {
-		_, err := parseFrets(tt.input, PitchOrder)
+		_, err := ParseFrets(tt.input, PitchOrder)
 		if err == nil {
-			t.Errorf("parseFrets(%q) expected error, got nil", tt.input)
+			t.Errorf("ParseFrets(%q) expected error, got nil", tt.input)
 			continue
 		}
 		if !strings.Contains(err.Error(), tt.wantInErr) {
-			t.Errorf("parseFrets(%q) error = %q, want it to contain %q", tt.input, err.Error(), tt.wantInErr)
+			t.Errorf("ParseFrets(%q) error = %q, want it to contain %q", tt.input, err.Error(), tt.wantInErr)
 		}
 	}
 }
@@ -119,7 +119,7 @@ func TestDetectBarre(t *testing.T) {
 func TestRenderChordBarreAllFretted(t *testing.T) {
 	// F#m: 244222 in pitch order — all strings fretted, barre at 2
 	frets := []int{2, 4, 4, 2, 2, 2}
-	diagram := renderChord("F#m", frets)
+	diagram := RenderChord("F#m", frets)
 	for _, want := range []string{
 		"e |---|-2------|",
 		"B |---|-2------|",
@@ -137,7 +137,7 @@ func TestRenderChordBarreAllFretted(t *testing.T) {
 func TestRenderChordBarreMutedString(t *testing.T) {
 	// Barre at 5 with muted low E: pitch order [-1, 5, 7, 7, 5, 5]
 	frets := []int{-1, 5, 7, 7, 5, 5}
-	diagram := renderChord("", frets)
+	diagram := RenderChord("", frets)
 	if !strings.Contains(diagram, "E |-----X------|") {
 		t.Errorf("muted string should use standard format (no barre pipe), got:\n%s", diagram)
 	}
@@ -149,7 +149,7 @@ func TestRenderChordBarreMutedString(t *testing.T) {
 func TestRenderChordMutedAsX(t *testing.T) {
 	// C chord: E muted, others have frets
 	frets := []int{-1, 3, 2, 0, 1, 0}
-	diagram := renderChord("C", frets)
+	diagram := RenderChord("C", frets)
 	if !strings.Contains(diagram, "E |-----X------|") {
 		t.Errorf("muted E string should render as X, got:\n%s", diagram)
 	}
@@ -163,7 +163,7 @@ func TestRenderChordMutedAsX(t *testing.T) {
 
 func TestRenderChordName(t *testing.T) {
 	frets := []int{0, 0, 0, 0, 0, 0}
-	diagram := renderChord("Em", frets)
+	diagram := RenderChord("Em", frets)
 	if !strings.HasPrefix(diagram, "    Em\n") {
 		t.Errorf("diagram should start with chord name, got:\n%s", diagram)
 	}
@@ -171,7 +171,7 @@ func TestRenderChordName(t *testing.T) {
 
 func TestRenderChordNoName(t *testing.T) {
 	frets := []int{0, 0, 0, 0, 0, 0}
-	diagram := renderChord("", frets)
+	diagram := RenderChord("", frets)
 	if strings.HasPrefix(diagram, " ") {
 		t.Errorf("nameless diagram should not start with spaces, got:\n%s", diagram)
 	}
