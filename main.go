@@ -16,6 +16,15 @@ import (
 
 var version = "dev"
 
+func expandPath(path string) string {
+	if strings.HasPrefix(path, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, path[2:])
+		}
+	}
+	return path
+}
+
 type Config struct {
 	InputOrder chord.InputOrder `json:"input_order,omitempty"`
 }
@@ -243,6 +252,7 @@ func main() {
 		// --- save to file ---
 		saveFile := prompt(scanner, "Save to file? (Enter filename, or press Enter to skip): ")
 		if saveFile != "" {
+			saveFile = expandPath(saveFile)
 			f, err := os.OpenFile(saveFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 			if err != nil {
 				fmt.Printf("Could not open file: %s\n\n", err)
