@@ -235,7 +235,7 @@ func main() {
 		if width > 80 {
 			width = 80
 		}
-		output := chord.RenderProgression(progression, width)
+		output := chord.RenderProgression(progression, width, true)
 		fmt.Println()
 		paginate(output, height-3, scanner)
 		fmt.Println()
@@ -247,7 +247,7 @@ func main() {
 			if err != nil {
 				fmt.Printf("Could not open file: %s\n\n", err)
 			} else {
-				fmt.Fprint(f, chord.RenderProgression(progression, 80))
+				fmt.Fprint(f, chord.RenderProgression(progression, 80, true))
 				fmt.Fprintln(f)
 				f.Close()
 				fmt.Printf("Appended to %s\n\n", saveFile)

@@ -96,12 +96,16 @@ func detectBarre(frets []int) int {
 }
 
 // RenderChord returns an ASCII tab diagram for a single chord. frets must be in pitch order.
-func RenderChord(name string, frets []int) string {
+// showBarre controls whether barre chord markers (|) are rendered.
+func RenderChord(name string, frets []int, showBarre bool) string {
 	var sb strings.Builder
 	if name != "" {
 		sb.WriteString(fmt.Sprintf("    %s\n", name))
 	}
-	barre := detectBarre(frets)
+	barre := 0
+	if showBarre {
+		barre = detectBarre(frets)
+	}
 	for display := 0; display < numStrings; display++ {
 		pitchIdx := numStrings - 1 - display
 		label := stringNames[display]
@@ -137,7 +141,8 @@ func centerInWidth(s string, w int) string {
 // RenderProgression renders chords side-by-side, wrapping rows to fit within width.
 // Each segment is 14 chars wide ("|-----0------|") with a 1-space gap between chords.
 // Total row width for N chords: 2 (label) + 14*N + (N-1) = 15N+1.
-func RenderProgression(chords []Chord, width int) string {
+// showBarre controls whether barre chord markers (|) are rendered.
+func RenderProgression(chords []Chord, width int, showBarre bool) string {
 	const segWidth = 14 // "|-----0------|"
 	const colWidth = 15 // segWidth + 1 space separator
 
@@ -170,7 +175,10 @@ func RenderProgression(chords []Chord, width int) string {
 			sb.WriteString(label + " ")
 			for i, ch := range row {
 				fret := ch.Frets[pitchIdx]
-				barre := detectBarre(ch.Frets)
+				barre := 0
+				if showBarre {
+					barre = detectBarre(ch.Frets)
+				}
 				var marker string
 				switch {
 				case fret == -1:

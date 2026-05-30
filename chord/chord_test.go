@@ -119,7 +119,7 @@ func TestDetectBarre(t *testing.T) {
 func TestRenderChordBarreAllFretted(t *testing.T) {
 	// F#m: 244222 in pitch order — all strings fretted, barre at 2
 	frets := []int{2, 4, 4, 2, 2, 2}
-	diagram := RenderChord("F#m", frets)
+	diagram := RenderChord("F#m", frets, true)
 	for _, want := range []string{
 		"e |---|-2------|",
 		"B |---|-2------|",
@@ -137,7 +137,7 @@ func TestRenderChordBarreAllFretted(t *testing.T) {
 func TestRenderChordBarreMutedString(t *testing.T) {
 	// Barre at 5 with muted low E: pitch order [-1, 5, 7, 7, 5, 5]
 	frets := []int{-1, 5, 7, 7, 5, 5}
-	diagram := RenderChord("", frets)
+	diagram := RenderChord("", frets, true)
 	if !strings.Contains(diagram, "E |-----X------|") {
 		t.Errorf("muted string should use standard format (no barre pipe), got:\n%s", diagram)
 	}
@@ -149,7 +149,7 @@ func TestRenderChordBarreMutedString(t *testing.T) {
 func TestRenderChordMutedAsX(t *testing.T) {
 	// C chord: E muted, others have frets
 	frets := []int{-1, 3, 2, 0, 1, 0}
-	diagram := RenderChord("C", frets)
+	diagram := RenderChord("C", frets, true)
 	if !strings.Contains(diagram, "E |-----X------|") {
 		t.Errorf("muted E string should render as X, got:\n%s", diagram)
 	}
@@ -163,7 +163,7 @@ func TestRenderChordMutedAsX(t *testing.T) {
 
 func TestRenderChordName(t *testing.T) {
 	frets := []int{0, 0, 0, 0, 0, 0}
-	diagram := RenderChord("Em", frets)
+	diagram := RenderChord("Em", frets, true)
 	if !strings.HasPrefix(diagram, "    Em\n") {
 		t.Errorf("diagram should start with chord name, got:\n%s", diagram)
 	}
@@ -171,7 +171,7 @@ func TestRenderChordName(t *testing.T) {
 
 func TestRenderChordNoName(t *testing.T) {
 	frets := []int{0, 0, 0, 0, 0, 0}
-	diagram := RenderChord("", frets)
+	diagram := RenderChord("", frets, true)
 	if strings.HasPrefix(diagram, " ") {
 		t.Errorf("nameless diagram should not start with spaces, got:\n%s", diagram)
 	}
