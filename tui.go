@@ -336,7 +336,18 @@ func (m model) viewFirstRun() string {
 func (m model) viewSettings() string {
 	var b strings.Builder
 	b.WriteString(m.viewHeader())
-	b.WriteString("\n  Settings\n")
+	b.WriteString("\n")
+
+	if len(m.progression) > 0 {
+		w := m.width
+		if w > 80 {
+			w = 80
+		}
+		b.WriteString(chord.RenderProgression(m.progression, w, m.cfg.ShowBarre))
+		b.WriteString("\n")
+	}
+
+	b.WriteString("  Settings\n")
 	b.WriteString("  " + strings.Repeat("─", 38) + "\n")
 
 	orderVal := "pitch (E A D G B e)"
