@@ -224,7 +224,7 @@ func (m model) handleSave(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyCtrlC:
 		return m, tea.Quit
 	case tea.KeyEnter:
-		filename := strings.TrimSpace(m.input.Value())
+		filename := expandPath(strings.TrimSpace(m.input.Value()))
 		if filename != "" {
 			f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 			if err != nil {
