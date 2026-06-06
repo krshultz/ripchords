@@ -139,11 +139,16 @@ func (m model) handleChordName(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
-	if m.input.Value() == "" && msg.String() == "?" {
-		m.prev = m.state
-		m.state = stateSettings
-		m.cursor = 0
-		return m, nil
+	if m.input.Value() == "" {
+		switch msg.String() {
+		case "?":
+			m.prev = m.state
+			m.state = stateSettings
+			m.cursor = 0
+			return m, nil
+		case "q":
+			return m, tea.Quit
+		}
 	}
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
@@ -173,6 +178,17 @@ func (m model) handleFrets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.input.Prompt = "Chord name: "
 		m.input.SetValue(m.pendingName)
 		return m, textinput.Blink
+	}
+	if m.input.Value() == "" {
+		switch msg.String() {
+		case "?":
+			m.prev = m.state
+			m.state = stateSettings
+			m.cursor = 0
+			return m, nil
+		case "q":
+			return m, tea.Quit
+		}
 	}
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
