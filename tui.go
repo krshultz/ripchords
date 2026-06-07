@@ -15,12 +15,13 @@ import (
 type appState int
 
 const (
-	stateFirstRun  appState = iota
-	stateChordName          // waiting for chord name
-	stateFrets              // waiting for fret positions
-	stateRendered           // showing progression, hotkeys active
-	stateSave               // waiting for filename
-	stateSettings           // settings overlay
+	stateFirstRun   appState = iota
+	stateChordName           // waiting for chord name
+	stateFrets               // waiting for fret positions
+	stateRendered            // showing progression, hotkeys active
+	stateSave                // waiting for filename
+	stateSettings            // settings overlay
+	stateLastChord           // showing last chord modal
 )
 
 type model struct {
@@ -89,6 +90,8 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSave(msg)
 	case stateSettings:
 		return m.handleSettings(msg)
+	case stateLastChord:
+		return m.handleLastChord(msg)
 	}
 	return m, nil
 }
@@ -146,6 +149,12 @@ func (m model) handleChordName(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.state = stateSettings
 			m.cursor = 0
 			return m, nil
+		case "l":
+			if len(m.progression) > 0 {
+				m.prev = m.state
+				m.state = stateLastChord
+				return m, nil
+			}
 		case "q":
 			return m, tea.Quit
 		}
@@ -186,6 +195,12 @@ func (m model) handleFrets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.state = stateSettings
 			m.cursor = 0
 			return m, nil
+		case "l":
+			if len(m.progression) > 0 {
+				m.prev = m.state
+				m.state = stateLastChord
+				return m, nil
+			}
 		case "q":
 			return m, tea.Quit
 		}
@@ -199,6 +214,12 @@ func (m model) handleRendered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
+	case "l":
+		if len(m.progression) > 0 {
+			m.prev = m.state
+			m.state = stateLastChord
+			return m, nil
+		}
 	case "a":
 		m.state = stateChordName
 		m.input.Prompt = "Chord name: "
@@ -303,12 +324,28 @@ func (m model) handleSettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m model) handleLastChord(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyCtrlC:
+		return m, tea.Quit
+	case tea.KeyEsc, tea.KeyEnter:
+		m.state = m.prev
+		if m.prev == stateChordName || m.prev == stateFrets || m.prev == stateSave {
+			return m, textinput.Blink
+		}
+		return m, nil
+	}
+	return m, nil
+}
+
 func (m model) View() string {
 	switch m.state {
 	case stateFirstRun:
 		return m.viewFirstRun()
 	case stateSettings:
 		return m.viewSettings()
+	case stateLastChord:
+		return m.viewLastChord()
 	default:
 		return m.viewMain()
 	}
@@ -371,12 +408,22 @@ func (m model) viewSettings() string {
 	return b.String()
 }
 
+func (m model) viewLastChord() string {
+	var b strings.Builder
+	b.WriteString(m.viewHeader())
+	b.WriteString("\n")
+	last := m.progression[len(m.progression)-1]
+	b.WriteString(chord.RenderChord(last.Name, last.Frets, m.cfg.ShowBarre))
+	b.WriteString("\n  Esc to dismiss\n")
+	return b.String()
+}
+
 func (m model) viewHeader() string {
 	order := "pitch"
 	if m.cfg.InputOrder == chord.StringOrder {
 		order = "string"
 	}
-	return fmt.Sprintf("ripchords — %s order  |  ? settings  |  r reset  |  q quit\n", order)
+	return fmt.Sprintf("ripchords — %s order  |  l last chord  |  ? settings  |  r reset  |  q quit\n", order)
 }
 
 func (m model) viewMain() string {
@@ -412,7 +459,7 @@ func (m model) viewMain() string {
 		if len(m.progression) == 0 {
 			b.WriteString("  (progression cleared)\n\n")
 		}
-		b.WriteString("  a add chord  s save  r reset  rr wipe config  ? settings  q quit\n")
+		b.WriteString("  a add chord  l last chord  s save  r reset  rr wipe config  ? settings  q quit\n")
 	case stateSave:
 		b.WriteString(m.input.View() + "\n")
 	}
