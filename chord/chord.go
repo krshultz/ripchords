@@ -83,14 +83,13 @@ func detectBarre(frets []int) int {
 	if minFret == 0 {
 		return 0
 	}
-	count := 0
+	prev := false
 	for _, f := range frets {
-		if f == minFret {
-			count++
+		at := f == minFret
+		if at && prev {
+			return minFret
 		}
-	}
-	if count >= 3 {
-		return minFret
+		prev = at
 	}
 	return 0
 }
@@ -103,8 +102,18 @@ func RenderChord(name string, frets []int, showBarre bool) string {
 		sb.WriteString(fmt.Sprintf("    %s\n", name))
 	}
 	barre := 0
+	mini := false
 	if showBarre {
 		barre = detectBarre(frets)
+		if barre > 0 {
+			n := 0
+			for _, f := range frets {
+				if f == barre {
+					n++
+				}
+			}
+			mini = n == 2
+		}
 	}
 	for display := 0; display < numStrings; display++ {
 		pitchIdx := numStrings - 1 - display
@@ -119,7 +128,8 @@ func RenderChord(name string, frets []int, showBarre bool) string {
 		default:
 			marker = strconv.Itoa(fret)
 		}
-		if barre > 0 && fret > 0 {
+		showMark := (mini && fret == barre) || (!mini && barre > 0 && fret > 0)
+		if showMark {
 			sb.WriteString(label + " |---|-" + marker + "------|\n")
 		} else {
 			sb.WriteString(label + " |-----" + marker + "------|\n")
@@ -169,16 +179,32 @@ func RenderProgression(chords []Chord, width int, showBarre bool) string {
 		}
 		sb.WriteString("\n")
 
+		barres := make([]int, len(row))
+		minis := make([]bool, len(row))
+		if showBarre {
+			for i, ch := range row {
+				b := detectBarre(ch.Frets)
+				barres[i] = b
+				if b > 0 {
+					n := 0
+					for _, f := range ch.Frets {
+						if f == b {
+							n++
+						}
+					}
+					minis[i] = n == 2
+				}
+			}
+		}
+
 		for display := 0; display < numStrings; display++ {
 			pitchIdx := numStrings - 1 - display
 			label := stringNames[display]
 			sb.WriteString(label + " ")
 			for i, ch := range row {
 				fret := ch.Frets[pitchIdx]
-				barre := 0
-				if showBarre {
-					barre = detectBarre(ch.Frets)
-				}
+				barre := barres[i]
+				mini := minis[i]
 				var marker string
 				switch {
 				case fret == -1:
@@ -188,8 +214,9 @@ func RenderProgression(chords []Chord, width int, showBarre bool) string {
 				default:
 					marker = strconv.Itoa(fret)
 				}
+				showMark := (mini && fret == barre) || (!mini && barre > 0 && fret > 0)
 				var seg string
-				if barre > 0 && fret > 0 {
+				if showMark {
 					seg = "|---|-" + marker + "------|"
 				} else {
 					seg = "|-----" + marker + "------|"

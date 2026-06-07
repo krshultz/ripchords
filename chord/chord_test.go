@@ -104,7 +104,8 @@ func TestDetectBarre(t *testing.T) {
 		{"open C no barre", []int{-1, 3, 2, 0, 1, 0}, 0},
 		{"all open no barre", []int{0, 0, 0, 0, 0, 0}, 0},
 		{"three strings at min fret", []int{-1, 5, 7, 7, 5, 5}, 5},
-		{"only two at min fret not barre", []int{-1, 7, 9, 9, 9, 7}, 0},
+		{"two non-adjacent strings at min fret no barre", []int{-1, 7, 9, 9, 9, 7}, 0},
+		{"two adjacent strings at min fret mini barre", []int{-1, 3, 3, 2, 1, 1}, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -130,6 +131,24 @@ func TestRenderChordBarreAllFretted(t *testing.T) {
 	} {
 		if !strings.Contains(diagram, want) {
 			t.Errorf("barre diagram missing %q, got:\n%s", want, diagram)
+		}
+	}
+}
+
+func TestRenderChordMiniBarreTwoAdjacentStrings(t *testing.T) {
+	// FMaj over C: x33211 in pitch order — mini barre at fret 1 (B and e only)
+	frets := []int{-1, 3, 3, 2, 1, 1}
+	diagram := RenderChord("FMaj", frets, true)
+	for _, want := range []string{
+		"e |---|-1------|",
+		"B |---|-1------|",
+		"G |-----2------|",
+		"D |-----3------|",
+		"A |-----3------|",
+		"E |-----X------|",
+	} {
+		if !strings.Contains(diagram, want) {
+			t.Errorf("mini-barre diagram missing %q, got:\n%s", want, diagram)
 		}
 	}
 }
