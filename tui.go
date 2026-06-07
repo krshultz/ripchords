@@ -38,6 +38,13 @@ type model struct {
 	prev        appState // state to return to from settings
 }
 
+func chordNamePrompt(n int) string {
+	if n == 0 {
+		return "Chord name: "
+	}
+	return "Next chord name: "
+}
+
 func newModel(cfg Config) model {
 	ti := textinput.New()
 	ti.Focus()
@@ -51,7 +58,7 @@ func newModel(cfg Config) model {
 		m.state = stateFirstRun
 	} else {
 		m.state = stateChordName
-		m.input.Prompt = "Chord name: "
+		m.input.Prompt = chordNamePrompt(len(m.progression))
 	}
 	return m
 }
@@ -116,7 +123,7 @@ func (m model) handleFirstRun(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		saveConfig(m.cfg)
 		m.state = stateChordName
-		m.input.Prompt = "Chord name: "
+		m.input.Prompt = chordNamePrompt(len(m.progression))
 		m.input.SetValue("")
 		m.cursor = 0
 		return m, textinput.Blink
@@ -184,7 +191,7 @@ func (m model) handleFrets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyEsc:
 		m.err = ""
 		m.state = stateChordName
-		m.input.Prompt = "Chord name: "
+		m.input.Prompt = chordNamePrompt(len(m.progression))
 		m.input.SetValue(m.pendingName)
 		return m, textinput.Blink
 	}
@@ -222,7 +229,7 @@ func (m model) handleRendered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "a":
 		m.state = stateChordName
-		m.input.Prompt = "Chord name: "
+		m.input.Prompt = chordNamePrompt(len(m.progression))
 		m.input.SetValue("")
 		m.err = ""
 		return m, textinput.Blink
@@ -447,8 +454,10 @@ func (m model) viewMain() string {
 
 	switch m.state {
 	case stateChordName:
+		b.WriteString(fmt.Sprintf("  Num chords: %d\n", len(m.progression)))
 		b.WriteString(m.input.View() + "\n")
 	case stateFrets:
+		b.WriteString(fmt.Sprintf("  Num chords: %d\n", len(m.progression)))
 		order := "E A D G B e"
 		if m.cfg.InputOrder == chord.StringOrder {
 			order = "e B G D A E"
