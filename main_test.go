@@ -34,3 +34,32 @@ func TestExpandPath(t *testing.T) {
 		}
 	}
 }
+
+func TestResolveVersionPrefersStamped(t *testing.T) {
+	orig := version
+	defer func() { version = orig }()
+
+	version = "v9.9.9"
+	if got := resolveVersion(); got != "v9.9.9" {
+		t.Errorf("resolveVersion() = %q, want stamped value %q", got, "v9.9.9")
+	}
+}
+
+func TestResolveVersionNeverEmpty(t *testing.T) {
+	orig := version
+	defer func() { version = orig }()
+
+	version = "dev"
+	if got := resolveVersion(); got == "" {
+		t.Error("resolveVersion() returned empty string")
+	}
+}
+
+func TestUsageText(t *testing.T) {
+	got := usageText()
+	for _, want := range []string{"ripchords", "Usage:", "--version", "--help"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("usageText() missing %q\n---\n%s", want, got)
+		}
+	}
+}
