@@ -91,7 +91,7 @@ func configPath() string {
 	if err != nil {
 		return ".ripchords.json"
 	}
-	return filepath.Join(home, ".config", "ripchords", "config.json")
+	return filepath.Join(home, ".ripchords", "config.json")
 }
 
 func loadConfig() Config {

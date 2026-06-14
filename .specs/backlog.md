@@ -30,8 +30,6 @@
   "print progression" hotkey may be redundant — decide whether it's still wanted.
 
 ## Settings flow — remaining
-* Storage location: the spec called for settings under `~/.ripchords/`. They currently
-  live in `~/.config/ripchords/config.json`. Decide on the final location.
 * New settings can be added over time; the toggle-based settings overlay already
   accommodates this. (Input-order and show-barre toggles are done.)
 
