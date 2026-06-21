@@ -29,6 +29,17 @@
   Note: the progression is already shown live above the prompt, so a dedicated `(p)`
   "print progression" hotkey may be redundant — decide whether it's still wanted.
 
+## Editing & reuse (new)
+* Edit a fret pattern instead of restarting. Today a typo means re-entering the whole
+  chord from scratch. Want in-place correction (backspace/edit of the current entry, or
+  re-opening an already-submitted chord to fix it).
+* Reuse a chord already entered this session. When notating a progression that repeats
+  chords (e.g. Bmin7 and DMaj several times each), the user shouldn't have to re-type the
+  fret positions. Recall a prior chord by name. Open design questions:
+  - Recall by typing the name (autocomplete) vs. picking from a list?
+  - Session-only memory, or persisted to disk between runs?
+  - Keep the TUI lightweight — avoid clutter.
+
 ## Settings flow — remaining
 * New settings can be added over time; the toggle-based settings overlay already
   accommodates this. (Input-order and show-barre toggles are done.)
