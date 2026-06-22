@@ -11,7 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ripchords/chord"
+	"ripchords/core"
 )
 
 // version is stamped at build time via -ldflags "-X main.version=...".
@@ -82,7 +82,7 @@ func expandPath(path string) string {
 }
 
 type Config struct {
-	InputOrder chord.InputOrder `json:"input_order,omitempty"`
+	InputOrder core.InputOrder `json:"input_order,omitempty"`
 	ShowBarre  bool             `json:"show_barre"`
 }
 
