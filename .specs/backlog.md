@@ -47,6 +47,9 @@
 ## Longer term goals
 * Output formats beyond ASCII tab: JPG/PNG, and maybe an animated GIF of transitions.
   (ASCII tab + save-to-file is done.)
+* Ingest chord fret positions as a runtime argument (pass a chord directly on the
+  command line instead of entering it interactively). Ideally the same parsing/build
+  logic backs both this runtime flow and the "import from CSV" flow below.
 * Import a list of chords, perhaps as a CSV file.
 * Internal database for reverse lookup: input fret positions, get a chord name back
   ("what chord is this?").
