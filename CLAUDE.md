@@ -15,6 +15,30 @@ go test ./... -run Foo  # run a single test
 go vet ./...            # lint/vet
 ```
 
+## Releases & Versioning
+
+Versioning is automated with [release-please](https://github.com/googleapis/release-please).
+The version is **derived from commit messages**, so commits/PR titles must follow
+[Conventional Commits](https://www.conventionalcommits.org/):
+
+| Prefix              | Effect (pre-1.0)            | Example                          |
+|---------------------|-----------------------------|----------------------------------|
+| `fix:`              | patch bump (0.1.0 → 0.1.1)  | `fix: correct mini-barre render` |
+| `feat:`             | minor bump (0.1.0 → 0.2.0)  | `feat: add capo support`         |
+| `feat!:` / `fix!:`  | minor bump while < 1.0.0¹   | `feat!: change settings format`  |
+| `chore:`/`docs:`/`refactor:`/`test:` | no release | `chore: tidy backlog`            |
+
+¹ `bump-minor-pre-major` is on, so breaking changes bump the minor (not major) until 1.0.0.
+
+**How a release happens:** every push to `main` runs the release-please workflow, which
+maintains an open "release PR" (titled `chore: release X.Y.Z`) accumulating changes and a
+CHANGELOG. Merging that PR creates the git tag (`vX.Y.Z`) and the GitHub Release. The binary's
+version is stamped from the tag via ldflags (see version resolution in `main.go`), so the tag,
+`--version` output, and GitHub Release stay in sync.
+
+Config lives in `release-please-config.json`; current version is tracked in
+`.release-please-manifest.json`. Squash-merge PRs so the PR title becomes the conventional commit.
+
 ## Domain Knowledge
 
 ### Guitar Strings
