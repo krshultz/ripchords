@@ -9,7 +9,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ripchords/chord"
+	"ripchords/core"
+	"ripchords/render/ascii"
 )
 
 type appState int
@@ -26,7 +27,7 @@ const (
 
 type model struct {
 	cfg         Config
-	progression []chord.Chord
+	session     core.Session
 	state       appState
 	input       textinput.Model
 	pendingName string
@@ -58,7 +59,7 @@ func newModel(cfg Config) model {
 		m.state = stateFirstRun
 	} else {
 		m.state = stateChordName
-		m.input.Prompt = chordNamePrompt(len(m.progression))
+		m.input.Prompt = chordNamePrompt(m.session.Len())
 	}
 	return m
 }
@@ -117,13 +118,13 @@ func (m model) handleFirstRun(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyEnter:
 		if m.cursor == 0 {
-			m.cfg.InputOrder = chord.PitchOrder
+			m.cfg.InputOrder = core.PitchOrder
 		} else {
-			m.cfg.InputOrder = chord.StringOrder
+			m.cfg.InputOrder = core.StringOrder
 		}
 		saveConfig(m.cfg)
 		m.state = stateChordName
-		m.input.Prompt = chordNamePrompt(len(m.progression))
+		m.input.Prompt = chordNamePrompt(m.session.Len())
 		m.input.SetValue("")
 		m.cursor = 0
 		return m, textinput.Blink
@@ -143,7 +144,7 @@ func (m model) handleChordName(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.input.SetValue("")
 		return m, textinput.Blink
 	case tea.KeyEsc:
-		if len(m.progression) > 0 {
+		if m.session.Len() > 0 {
 			m.state = stateRendered
 			m.input.SetValue("")
 			return m, nil
@@ -157,7 +158,7 @@ func (m model) handleChordName(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor = 0
 			return m, nil
 		case "l":
-			if len(m.progression) > 0 {
+			if m.session.Len() > 0 {
 				m.prev = m.state
 				m.state = stateLastChord
 				return m, nil
@@ -177,21 +178,19 @@ func (m model) handleFrets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case tea.KeyEnter:
 		val := strings.TrimSpace(m.input.Value())
-		frets, err := chord.ParseFrets(val, m.cfg.InputOrder)
-		if err != nil {
+		if _, err := m.session.Add(m.pendingName, val, m.cfg.InputOrder); err != nil {
 			m.err = err.Error()
 			m.input.SetValue("")
 			return m, nil
 		}
 		m.err = ""
-		m.progression = append(m.progression, chord.Chord{Name: m.pendingName, Frets: frets})
 		m.state = stateRendered
 		m.input.SetValue("")
 		return m, nil
 	case tea.KeyEsc:
 		m.err = ""
 		m.state = stateChordName
-		m.input.Prompt = chordNamePrompt(len(m.progression))
+		m.input.Prompt = chordNamePrompt(m.session.Len())
 		m.input.SetValue(m.pendingName)
 		return m, textinput.Blink
 	}
@@ -203,7 +202,7 @@ func (m model) handleFrets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor = 0
 			return m, nil
 		case "l":
-			if len(m.progression) > 0 {
+			if m.session.Len() > 0 {
 				m.prev = m.state
 				m.state = stateLastChord
 				return m, nil
@@ -222,19 +221,19 @@ func (m model) handleRendered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c", "q":
 		return m, tea.Quit
 	case "l":
-		if len(m.progression) > 0 {
+		if m.session.Len() > 0 {
 			m.prev = m.state
 			m.state = stateLastChord
 			return m, nil
 		}
 	case "a":
 		m.state = stateChordName
-		m.input.Prompt = chordNamePrompt(len(m.progression))
+		m.input.Prompt = chordNamePrompt(m.session.Len())
 		m.input.SetValue("")
 		m.err = ""
 		return m, textinput.Blink
 	case "s":
-		if len(m.progression) == 0 {
+		if m.session.Len() == 0 {
 			return m, nil
 		}
 		m.state = stateSave
@@ -247,13 +246,13 @@ func (m model) handleRendered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if !m.lastR.IsZero() && now.Sub(m.lastR) <= 500*time.Millisecond {
 			os.Remove(configPath()) //nolint
 			m.cfg = Config{ShowBarre: true}
-			m.progression = nil
+			m.session.Reset()
 			m.state = stateFirstRun
 			m.cursor = 0
 			m.lastR = time.Time{}
 		} else {
 			m.lastR = now
-			m.progression = nil
+			m.session.Reset()
 		}
 	case "?":
 		m.prev = m.state
@@ -276,7 +275,7 @@ func (m model) handleSave(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.input.SetValue("")
 				return m, nil
 			}
-			fmt.Fprint(f, chord.RenderProgression(m.progression, 80, m.cfg.ShowBarre))
+			fmt.Fprint(f, ascii.RenderProgression(m.session.Chords, 80, m.cfg.ShowBarre))
 			fmt.Fprintln(f)
 			f.Close()
 			m.err = fmt.Sprintf("saved to %s", filename)
@@ -319,10 +318,10 @@ func (m model) handleSettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeySpace:
 		switch m.cursor {
 		case 0:
-			if m.cfg.InputOrder == chord.PitchOrder {
-				m.cfg.InputOrder = chord.StringOrder
+			if m.cfg.InputOrder == core.PitchOrder {
+				m.cfg.InputOrder = core.StringOrder
 			} else {
-				m.cfg.InputOrder = chord.PitchOrder
+				m.cfg.InputOrder = core.PitchOrder
 			}
 		case 1:
 			m.cfg.ShowBarre = !m.cfg.ShowBarre
@@ -382,12 +381,12 @@ func (m model) viewSettings() string {
 	b.WriteString(m.viewHeader())
 	b.WriteString("\n")
 
-	if len(m.progression) > 0 {
+	if m.session.Len() > 0 {
 		w := m.width
 		if w > 80 {
 			w = 80
 		}
-		b.WriteString(chord.RenderProgression(m.progression, w, m.cfg.ShowBarre))
+		b.WriteString(ascii.RenderProgression(m.session.Chords, w, m.cfg.ShowBarre))
 		b.WriteString("\n")
 	}
 
@@ -395,7 +394,7 @@ func (m model) viewSettings() string {
 	b.WriteString("  " + strings.Repeat("─", 38) + "\n")
 
 	orderVal := "pitch (E A D G B e)"
-	if m.cfg.InputOrder == chord.StringOrder {
+	if m.cfg.InputOrder == core.StringOrder {
 		orderVal = "string (e B G D A E)"
 	}
 	barreVal := "off"
@@ -419,15 +418,15 @@ func (m model) viewLastChord() string {
 	var b strings.Builder
 	b.WriteString(m.viewHeader())
 	b.WriteString("\n")
-	last := m.progression[len(m.progression)-1]
-	b.WriteString(chord.RenderChord(last.Name, last.Frets, m.cfg.ShowBarre))
+	last, _ := m.session.Last()
+	b.WriteString(ascii.RenderChord(last.Name, last.Frets, m.cfg.ShowBarre))
 	b.WriteString("\n  Esc to dismiss\n")
 	return b.String()
 }
 
 func (m model) viewHeader() string {
 	order := "pitch"
-	if m.cfg.InputOrder == chord.StringOrder {
+	if m.cfg.InputOrder == core.StringOrder {
 		order = "string"
 	}
 	return fmt.Sprintf("ripchords — %s order  |  l last chord  |  ? settings  |  r reset  |  q quit\n", order)
@@ -443,8 +442,8 @@ func (m model) viewMain() string {
 		w = 80
 	}
 
-	if len(m.progression) > 0 {
-		b.WriteString(chord.RenderProgression(m.progression, w, m.cfg.ShowBarre))
+	if m.session.Len() > 0 {
+		b.WriteString(ascii.RenderProgression(m.session.Chords, w, m.cfg.ShowBarre))
 		b.WriteString("\n")
 	}
 
@@ -454,18 +453,18 @@ func (m model) viewMain() string {
 
 	switch m.state {
 	case stateChordName:
-		b.WriteString(fmt.Sprintf("  Num chords: %d\n", len(m.progression)))
+		b.WriteString(fmt.Sprintf("  Num chords: %d\n", m.session.Len()))
 		b.WriteString(m.input.View() + "\n")
 	case stateFrets:
-		b.WriteString(fmt.Sprintf("  Num chords: %d\n", len(m.progression)))
+		b.WriteString(fmt.Sprintf("  Num chords: %d\n", m.session.Len()))
 		order := "E A D G B e"
-		if m.cfg.InputOrder == chord.StringOrder {
+		if m.cfg.InputOrder == core.StringOrder {
 			order = "e B G D A E"
 		}
 		b.WriteString("  (" + order + ")\n")
 		b.WriteString(m.input.View() + "\n")
 	case stateRendered:
-		if len(m.progression) == 0 {
+		if m.session.Len() == 0 {
 			b.WriteString("  (progression cleared)\n\n")
 		}
 		b.WriteString("  a add chord  l last chord  s save  r reset  rr wipe config  ? settings  q quit\n")
