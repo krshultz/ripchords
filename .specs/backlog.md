@@ -35,11 +35,6 @@
   - There's no on-screen hint that `Esc` cancels.
   - At the fret step, `Esc` only steps *back* to the name prompt; it doesn't abort the add.
   - When entering the very first chord (empty progression), there's no way to back out.
-* Edit a fret pattern instead of restarting. Today a typo means re-entering the whole
-  chord from scratch. Want in-place correction (backspace/edit of the current entry, or
-  re-opening an already-submitted chord to fix it).
-* Rename a chord. Allow changing the name of a chord already entered this session
-  (e.g. fix a typo in the name, or relabel without re-entering fret positions).
 * Reuse a chord already entered this session. When notating a progression that repeats
   chords (e.g. Bmin7 and DMaj several times each), the user shouldn't have to re-type the
   fret positions. Recall a prior chord by name. Open design questions:
@@ -63,4 +58,8 @@
 * Display the chords in a progression by name, e.g. "A minor --> C major --> DSus2".
 
 ## Recently shipped
-_Items move here when they merge to main._
+* Edit a fret pattern instead of restarting (#13). From the rendered screen, `e` re-opens
+  an already-submitted chord to replace its fret positions — no need to re-enter the whole
+  progression to fix a typo.
+* Rename a chord (#13). `e` → pick a chord → Rename changes the name of a chord already
+  entered this session without re-entering fret positions.
