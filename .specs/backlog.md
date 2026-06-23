@@ -1,7 +1,8 @@
 # Running list of goals for ripchords CLI
 
-> Shipped items have been removed from this backlog (see git history / README for what's done).
-> What remains below is open work or items that deviate from the original spec.
+> When an item ships (merges to main), it moves to the "Recently shipped" section
+> at the bottom — not deleted — so completed work stays visible in-file.
+> Everything above that section is open work or items that deviate from the original spec.
 
 ## Core design principles
 * Ripchords must be entirely self contained. No internet access required at all.
@@ -30,6 +31,10 @@
   "print progression" hotkey may be redundant — decide whether it's still wanted.
 
 ## Editing & reuse (new)
+* Cancel entering a chord — close the gaps. `Esc` already cancels at the name step, but:
+  - There's no on-screen hint that `Esc` cancels.
+  - At the fret step, `Esc` only steps *back* to the name prompt; it doesn't abort the add.
+  - When entering the very first chord (empty progression), there's no way to back out.
 * Edit a fret pattern instead of restarting. Today a typo means re-entering the whole
   chord from scratch. Want in-place correction (backspace/edit of the current entry, or
   re-opening an already-submitted chord to fix it).
@@ -56,3 +61,6 @@
 * Internal database for reverse lookup: input fret positions, get a chord name back
   ("what chord is this?").
 * Display the chords in a progression by name, e.g. "A minor --> C major --> DSus2".
+
+## Recently shipped
+_Items move here when they merge to main._
