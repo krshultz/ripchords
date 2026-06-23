@@ -23,6 +23,10 @@ const (
 	stateSave                // waiting for filename
 	stateSettings            // settings overlay
 	stateLastChord           // showing last chord modal
+	stateEditPick            // choosing which chord to edit
+	stateEditAction          // choosing rename vs edit frets
+	stateEditName            // entering a new name for the chosen chord
+	stateEditFrets           // entering new fret positions for the chosen chord
 )
 
 type model struct {
@@ -37,6 +41,7 @@ type model struct {
 	height      int
 	err         string
 	prev        appState // state to return to from settings
+	editIdx     int      // index of the chord being edited
 }
 
 func chordNamePrompt(n int) string {
@@ -76,7 +81,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	}
-	if m.state == stateChordName || m.state == stateFrets || m.state == stateSave {
+	switch m.state {
+	case stateChordName, stateFrets, stateSave, stateEditName, stateEditFrets:
 		var cmd tea.Cmd
 		m.input, cmd = m.input.Update(msg)
 		return m, cmd
@@ -100,6 +106,14 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSettings(msg)
 	case stateLastChord:
 		return m.handleLastChord(msg)
+	case stateEditPick:
+		return m.handleEditPick(msg)
+	case stateEditAction:
+		return m.handleEditAction(msg)
+	case stateEditName:
+		return m.handleEditName(msg)
+	case stateEditFrets:
+		return m.handleEditFrets(msg)
 	}
 	return m, nil
 }
@@ -232,6 +246,13 @@ func (m model) handleRendered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.input.SetValue("")
 		m.err = ""
 		return m, textinput.Blink
+	case "e":
+		if m.session.Len() > 0 {
+			m.state = stateEditPick
+			m.cursor = 0
+			m.err = ""
+		}
+		return m, nil
 	case "s":
 		if m.session.Len() == 0 {
 			return m, nil
@@ -344,6 +365,115 @@ func (m model) handleLastChord(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m model) handleEditPick(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyCtrlC:
+		return m, tea.Quit
+	case tea.KeyEsc:
+		m.state = stateRendered
+		return m, nil
+	case tea.KeyUp:
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case tea.KeyDown:
+		if m.cursor < m.session.Len()-1 {
+			m.cursor++
+		}
+	case tea.KeyEnter:
+		m.editIdx = m.cursor
+		m.state = stateEditAction
+		m.cursor = 0
+		return m, nil
+	}
+	return m, nil
+}
+
+var editActionLabels = []string{"Rename", "Edit frets"}
+
+func (m model) handleEditAction(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyCtrlC:
+		return m, tea.Quit
+	case tea.KeyEsc:
+		m.state = stateEditPick
+		m.cursor = m.editIdx
+		return m, nil
+	case tea.KeyUp:
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case tea.KeyDown:
+		if m.cursor < len(editActionLabels)-1 {
+			m.cursor++
+		}
+	case tea.KeyEnter:
+		if m.cursor == 0 {
+			m.state = stateEditName
+			m.input.Prompt = "New name: "
+			m.input.SetValue(m.session.Chords[m.editIdx].Name)
+			m.input.CursorEnd()
+		} else {
+			m.state = stateEditFrets
+			m.input.Prompt = "New fret positions: "
+			m.input.SetValue("")
+		}
+		return m, textinput.Blink
+	}
+	return m, nil
+}
+
+func (m model) handleEditName(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyCtrlC:
+		return m, tea.Quit
+	case tea.KeyEnter:
+		if err := m.session.Rename(m.editIdx, m.input.Value()); err != nil {
+			m.err = err.Error()
+		} else {
+			m.err = ""
+		}
+		m.state = stateRendered
+		m.input.SetValue("")
+		return m, nil
+	case tea.KeyEsc:
+		m.state = stateEditAction
+		m.cursor = 0
+		m.input.SetValue("")
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	return m, cmd
+}
+
+func (m model) handleEditFrets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyCtrlC:
+		return m, tea.Quit
+	case tea.KeyEnter:
+		val := strings.TrimSpace(m.input.Value())
+		if err := m.session.EditFrets(m.editIdx, val, m.cfg.InputOrder); err != nil {
+			m.err = err.Error()
+			m.input.SetValue("")
+			return m, nil
+		}
+		m.err = ""
+		m.state = stateRendered
+		m.input.SetValue("")
+		return m, nil
+	case tea.KeyEsc:
+		m.err = ""
+		m.state = stateEditAction
+		m.cursor = 0
+		m.input.SetValue("")
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	return m, cmd
+}
+
 func (m model) View() string {
 	switch m.state {
 	case stateFirstRun:
@@ -352,9 +482,66 @@ func (m model) View() string {
 		return m.viewSettings()
 	case stateLastChord:
 		return m.viewLastChord()
+	case stateEditPick:
+		return m.viewEditPick()
+	case stateEditAction:
+		return m.viewEditAction()
 	default:
 		return m.viewMain()
 	}
+}
+
+func (m model) chordLabel(i int) string {
+	name := m.session.Chords[i].Name
+	if name == "" {
+		name = "(unnamed)"
+	}
+	return name
+}
+
+func (m model) viewEditPick() string {
+	var b strings.Builder
+	b.WriteString(m.viewHeader())
+	b.WriteString("\n")
+
+	w := m.width
+	if w > 80 {
+		w = 80
+	}
+	b.WriteString(ascii.RenderProgression(m.session.Chords, w, m.cfg.ShowBarre))
+	b.WriteString("\n")
+
+	b.WriteString("  Edit which chord?\n")
+	for i := range m.session.Chords {
+		prefix := "    "
+		if i == m.cursor {
+			prefix = "  > "
+		}
+		b.WriteString(fmt.Sprintf("%s%d. %s\n", prefix, i+1, m.chordLabel(i)))
+	}
+	b.WriteString("\n  ↑/↓ select  Enter choose  Esc cancel\n")
+	return b.String()
+}
+
+func (m model) viewEditAction() string {
+	var b strings.Builder
+	b.WriteString(m.viewHeader())
+	b.WriteString("\n")
+
+	last := m.session.Chords[m.editIdx]
+	b.WriteString(ascii.RenderChord(last.Name, last.Frets, m.cfg.ShowBarre))
+	b.WriteString("\n")
+
+	b.WriteString(fmt.Sprintf("  Editing chord %d: %s\n", m.editIdx+1, m.chordLabel(m.editIdx)))
+	for i, label := range editActionLabels {
+		prefix := "    "
+		if i == m.cursor {
+			prefix = "  > "
+		}
+		b.WriteString(prefix + label + "\n")
+	}
+	b.WriteString("\n  ↑/↓ select  Enter choose  Esc back\n")
+	return b.String()
 }
 
 func (m model) viewFirstRun() string {
@@ -467,8 +654,19 @@ func (m model) viewMain() string {
 		if m.session.Len() == 0 {
 			b.WriteString("  (progression cleared)\n\n")
 		}
-		b.WriteString("  a add chord  l last chord  s save  r reset  rr wipe config  ? settings  q quit\n")
+		b.WriteString("  a add chord  e edit chord  l last chord  s save  r reset  rr wipe config  ? settings  q quit\n")
 	case stateSave:
+		b.WriteString(m.input.View() + "\n")
+	case stateEditName:
+		b.WriteString(fmt.Sprintf("  Editing chord %d name\n", m.editIdx+1))
+		b.WriteString(m.input.View() + "\n")
+	case stateEditFrets:
+		b.WriteString(fmt.Sprintf("  Editing chord %d frets\n", m.editIdx+1))
+		order := "E A D G B e"
+		if m.cfg.InputOrder == core.StringOrder {
+			order = "e B G D A E"
+		}
+		b.WriteString("  (" + order + ")\n")
 		b.WriteString(m.input.View() + "\n")
 	}
 
