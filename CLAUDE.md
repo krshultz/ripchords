@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **ripchords** is a Go TUI application that renders guitar chord diagrams in ASCII tab format. The user provides fret positions for each string; the app outputs a standard ASCII chord diagram.
 
+## Project Status / Backlog
+
+Open work and roadmap live in **`.specs/backlog.md`** (specs in general live under `.specs/`).
+Check it at the start of a session to see what's outstanding. When an item ships (merges to
+main) it moves to the "Recently shipped" section at the bottom of the backlog — not deleted —
+so what remains above is open work or deviations from the original spec.
+
 ## Commands
 
 ```bash
