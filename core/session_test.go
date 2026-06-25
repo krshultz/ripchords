@@ -2,6 +2,15 @@ package core
 
 import "testing"
 
+// mustAdd adds a chord to s in pitch order and fails the test if it errors.
+// Used for known-good setup where a parse failure means the test itself is broken.
+func mustAdd(t *testing.T, s *Session, name, frets string) {
+	t.Helper()
+	if _, err := s.Add(name, frets, PitchOrder); err != nil {
+		t.Fatalf("setup Add(%q, %q): %v", name, frets, err)
+	}
+}
+
 func TestSessionAddAndLast(t *testing.T) {
 	var s Session
 	if s.Len() != 0 {
@@ -39,8 +48,8 @@ func TestSessionAddParseErrorLeavesProgressionUnchanged(t *testing.T) {
 
 func TestSessionReset(t *testing.T) {
 	var s Session
-	s.Add("C", "x32010", PitchOrder)
-	s.Add("G", "320003", PitchOrder)
+	mustAdd(t, &s, "C", "x32010")
+	mustAdd(t, &s, "G", "320003")
 	s.Reset()
 	if s.Len() != 0 {
 		t.Errorf("Len after Reset = %d, want 0", s.Len())
@@ -49,7 +58,7 @@ func TestSessionReset(t *testing.T) {
 
 func TestSessionRename(t *testing.T) {
 	var s Session
-	s.Add("C", "x32010", PitchOrder)
+	mustAdd(t, &s, "C", "x32010")
 	if err := s.Rename(0, "  Cmaj  "); err != nil {
 		t.Fatalf("Rename returned error: %v", err)
 	}
@@ -63,7 +72,7 @@ func TestSessionRename(t *testing.T) {
 
 func TestSessionEditFrets(t *testing.T) {
 	var s Session
-	s.Add("C", "x32010", PitchOrder)
+	mustAdd(t, &s, "C", "x32010")
 
 	if err := s.EditFrets(0, "x 3 2 0 1 3", PitchOrder); err != nil {
 		t.Fatalf("EditFrets returned error: %v", err)

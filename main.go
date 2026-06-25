@@ -1,3 +1,6 @@
+// Command ripchords is a terminal app that renders guitar chord diagrams as
+// ASCII tab. It reads fret positions interactively and builds up a progression
+// the user can save to a file.
 package main
 
 import (
@@ -83,7 +86,7 @@ func expandPath(path string) string {
 
 type Config struct {
 	InputOrder core.InputOrder `json:"input_order,omitempty"`
-	ShowBarre  bool             `json:"show_barre"`
+	ShowBarre  bool            `json:"show_barre"`
 }
 
 func configPath() string {

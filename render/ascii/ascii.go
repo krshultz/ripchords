@@ -37,10 +37,10 @@ func barreInfo(frets []int, showBarre bool) (barre int, mini bool) {
 // stringSegment renders the 14-char tab segment for a single string.
 func stringSegment(fret, barre int, mini bool) string {
 	var marker string
-	switch {
-	case fret == -1:
+	switch fret {
+	case -1:
 		marker = "X"
-	case fret == 0:
+	case 0:
 		marker = "0"
 	default:
 		marker = strconv.Itoa(fret)
@@ -57,7 +57,7 @@ func stringSegment(fret, barre int, mini bool) string {
 func RenderChord(name string, frets []int, showBarre bool) string {
 	var sb strings.Builder
 	if name != "" {
-		sb.WriteString(fmt.Sprintf("    %s\n", name))
+		fmt.Fprintf(&sb, "    %s\n", name)
 	}
 	barre, mini := barreInfo(frets, showBarre)
 	for display := 0; display < core.NumStrings; display++ {

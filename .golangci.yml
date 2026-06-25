@@ -1,0 +1,21 @@
+# golangci-lint configuration (schema v2).
+# Run locally with: make lint   (or: golangci-lint run)
+version: "2"
+
+issues:
+  # Show every finding (defaults cap duplicates), so a clean run really is clean.
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  # Start from golangci-lint's default set (errcheck, govet, ineffassign,
+  # staticcheck, unused) and add a few low-noise extras.
+  default: standard
+  enable:
+    - misspell    # catches common spelling mistakes in comments/strings
+    - revive      # stylistic checks (replacement for the old golint)
+
+formatters:
+  enable:
+    - gofmt       # standard Go formatting
+    - goimports   # keeps imports grouped and sorted
