@@ -39,6 +39,13 @@ jobs:
         env:
           BRANCH: ${{ github.head_ref }}   # via env to avoid script injection
         run: |
+          # release-please generates its own branch name (e.g.
+          # release-please--branches--main--components--ripchords); it's machine
+          # managed, not a human-authored branch, so exempt it from the convention.
+          if [[ "$BRANCH" == release-please--* ]]; then
+            echo "Release automation branch, skipping naming check: $BRANCH"
+            exit 0
+          fi
           pattern='^(feat|fix|chore|docs|refactor|test|ci|build|perf)/[a-z0-9._-]+$'
           if [[ ! "$BRANCH" =~ $pattern ]]; then
             echo "::error::Branch '$BRANCH' must match $pattern"
