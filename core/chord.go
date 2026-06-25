@@ -16,6 +16,8 @@ const NumStrings = 6
 // InputOrder controls how fret positions are interpreted on input.
 type InputOrder string
 
+// Input-order values: PitchOrder reads positions low-to-high pitch
+// (E A D G B e); StringOrder reads them by string number (string 1 to 6).
 const (
 	PitchOrder  InputOrder = "pitch"
 	StringOrder InputOrder = "string_number"

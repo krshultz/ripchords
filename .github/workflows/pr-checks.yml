@@ -1,0 +1,48 @@
+name: pr-checks
+
+# Metadata checks on the pull request itself (not the code):
+#   1. the PR title is a valid Conventional Commit (it becomes the squash commit,
+#      which release-please reads to decide the next version)
+#   2. the branch name follows our <type>/<description> convention
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  conventional-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Allowed prefixes — keep in sync with CONTRIBUTING.md and the
+          # release-please table in CLAUDE.md.
+          types: |
+            feat
+            fix
+            chore
+            docs
+            refactor
+            test
+            ci
+            build
+            perf
+
+  branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch name follows <type>/<kebab-description>
+        env:
+          BRANCH: ${{ github.head_ref }}   # via env to avoid script injection
+        run: |
+          pattern='^(feat|fix|chore|docs|refactor|test|ci|build|perf)/[a-z0-9._-]+$'
+          if [[ ! "$BRANCH" =~ $pattern ]]; then
+            echo "::error::Branch '$BRANCH' must match $pattern"
+            echo "Examples: fix/18-rr-confirm  feat/capo-support  ci/add-linting"
+            exit 1
+          fi
+          echo "Branch name OK: $BRANCH"

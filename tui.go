@@ -296,10 +296,18 @@ func (m model) handleSave(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.input.SetValue("")
 				return m, nil
 			}
-			fmt.Fprint(f, ascii.RenderProgression(m.session.Chords, 80, m.cfg.ShowBarre))
-			fmt.Fprintln(f)
-			f.Close()
-			m.err = fmt.Sprintf("saved to %s", filename)
+			_, werr := fmt.Fprint(f, ascii.RenderProgression(m.session.Chords, 80, m.cfg.ShowBarre))
+			if werr == nil {
+				_, werr = fmt.Fprintln(f)
+			}
+			if cerr := f.Close(); werr == nil {
+				werr = cerr
+			}
+			if werr != nil {
+				m.err = fmt.Sprintf("could not write file: %s", werr)
+			} else {
+				m.err = fmt.Sprintf("saved to %s", filename)
+			}
 		}
 		m.state = stateRendered
 		m.input.SetValue("")
@@ -517,7 +525,7 @@ func (m model) viewEditPick() string {
 		if i == m.cursor {
 			prefix = "  > "
 		}
-		b.WriteString(fmt.Sprintf("%s%d. %s\n", prefix, i+1, m.chordLabel(i)))
+		fmt.Fprintf(&b, "%s%d. %s\n", prefix, i+1, m.chordLabel(i))
 	}
 	b.WriteString("\n  ↑/↓ select  Enter choose  Esc cancel\n")
 	return b.String()
@@ -532,7 +540,7 @@ func (m model) viewEditAction() string {
 	b.WriteString(ascii.RenderChord(last.Name, last.Frets, m.cfg.ShowBarre))
 	b.WriteString("\n")
 
-	b.WriteString(fmt.Sprintf("  Editing chord %d: %s\n", m.editIdx+1, m.chordLabel(m.editIdx)))
+	fmt.Fprintf(&b, "  Editing chord %d: %s\n", m.editIdx+1, m.chordLabel(m.editIdx))
 	for i, label := range editActionLabels {
 		prefix := "    "
 		if i == m.cursor {
@@ -595,7 +603,7 @@ func (m model) viewSettings() string {
 		if i == m.cursor {
 			prefix = "  > "
 		}
-		b.WriteString(fmt.Sprintf("%s%-22s %s\n", prefix, label, values[i]))
+		fmt.Fprintf(&b, "%s%-22s %s\n", prefix, label, values[i])
 	}
 	b.WriteString("\n  ↑/↓ select  Space toggle  Enter/Esc close\n")
 	return b.String()
@@ -640,10 +648,10 @@ func (m model) viewMain() string {
 
 	switch m.state {
 	case stateChordName:
-		b.WriteString(fmt.Sprintf("  Num chords: %d\n", m.session.Len()))
+		fmt.Fprintf(&b, "  Num chords: %d\n", m.session.Len())
 		b.WriteString(m.input.View() + "\n")
 	case stateFrets:
-		b.WriteString(fmt.Sprintf("  Num chords: %d\n", m.session.Len()))
+		fmt.Fprintf(&b, "  Num chords: %d\n", m.session.Len())
 		order := "E A D G B e"
 		if m.cfg.InputOrder == core.StringOrder {
 			order = "e B G D A E"
@@ -658,10 +666,10 @@ func (m model) viewMain() string {
 	case stateSave:
 		b.WriteString(m.input.View() + "\n")
 	case stateEditName:
-		b.WriteString(fmt.Sprintf("  Editing chord %d name\n", m.editIdx+1))
+		fmt.Fprintf(&b, "  Editing chord %d name\n", m.editIdx+1)
 		b.WriteString(m.input.View() + "\n")
 	case stateEditFrets:
-		b.WriteString(fmt.Sprintf("  Editing chord %d frets\n", m.editIdx+1))
+		fmt.Fprintf(&b, "  Editing chord %d frets\n", m.editIdx+1)
 		order := "E A D G B e"
 		if m.cfg.InputOrder == core.StringOrder {
 			order = "e B G D A E"
