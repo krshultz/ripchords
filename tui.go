@@ -16,17 +16,19 @@ import (
 type appState int
 
 const (
-	stateFirstRun   appState = iota
-	stateChordName           // waiting for chord name
-	stateFrets               // waiting for fret positions
-	stateRendered            // showing progression, hotkeys active
-	stateSave                // waiting for filename
-	stateSettings            // settings overlay
-	stateLastChord           // showing last chord modal
-	stateEditPick            // choosing which chord to edit
-	stateEditAction          // choosing rename vs edit frets
-	stateEditName            // entering a new name for the chosen chord
-	stateEditFrets           // entering new fret positions for the chosen chord
+	stateFirstRun      appState = iota // first-run: choosing input order
+	stateFirstRunBarre                 // first-run: choosing barre on/off
+	stateChordName                     // waiting for chord name
+	stateFrets                         // waiting for fret positions
+	stateRendered                      // showing progression, hotkeys active
+	stateSave                          // waiting for filename
+	stateSettings                      // settings overlay
+	stateLastChord                     // showing last chord modal
+	stateConfirmWipe                   // confirming a full config wipe
+	stateEditPick                      // choosing which chord to edit
+	stateEditAction                    // choosing rename vs edit frets
+	stateEditName                      // entering a new name for the chosen chord
+	stateEditFrets                     // entering new fret positions for the chosen chord
 )
 
 type model struct {
@@ -94,6 +96,10 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch m.state {
 	case stateFirstRun:
 		return m.handleFirstRun(msg)
+	case stateFirstRunBarre:
+		return m.handleFirstRunBarre(msg)
+	case stateConfirmWipe:
+		return m.handleConfirmWipe(msg)
 	case stateChordName:
 		return m.handleChordName(msg)
 	case stateFrets:
@@ -136,6 +142,31 @@ func (m model) handleFirstRun(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else {
 			m.cfg.InputOrder = core.StringOrder
 		}
+		// Advance to the barre choice; config is saved once both are picked.
+		m.state = stateFirstRunBarre
+		m.cursor = 0
+		if !m.cfg.ShowBarre {
+			m.cursor = 1
+		}
+		return m, nil
+	}
+	return m, nil
+}
+
+func (m model) handleFirstRunBarre(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyCtrlC:
+		return m, tea.Quit
+	case tea.KeyUp:
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case tea.KeyDown:
+		if m.cursor < 1 {
+			m.cursor++
+		}
+	case tea.KeyEnter:
+		m.cfg.ShowBarre = m.cursor == 0
 		saveConfig(m.cfg)
 		m.state = stateChordName
 		m.input.Prompt = chordNamePrompt(m.session.Len())
@@ -265,12 +296,10 @@ func (m model) handleRendered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "r":
 		now := time.Now()
 		if !m.lastR.IsZero() && now.Sub(m.lastR) <= 500*time.Millisecond {
-			os.Remove(configPath()) //nolint
-			m.cfg = Config{ShowBarre: true}
-			m.session.Reset()
-			m.state = stateFirstRun
-			m.cursor = 0
+			// Second quick r: don't wipe yet — ask for confirmation first, so
+			// an accidental double-tap can't destroy the saved config.
 			m.lastR = time.Time{}
+			m.state = stateConfirmWipe
 		} else {
 			m.lastR = now
 			m.session.Reset()
@@ -279,6 +308,23 @@ func (m model) handleRendered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.prev = m.state
 		m.state = stateSettings
 		m.cursor = 0
+	}
+	return m, nil
+}
+
+func (m model) handleConfirmWipe(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyCtrlC {
+		return m, tea.Quit
+	}
+	switch msg.String() {
+	case "y", "Y":
+		os.Remove(configPath()) //nolint
+		m.cfg = Config{ShowBarre: true}
+		m.session.Reset()
+		m.state = stateFirstRun
+		m.cursor = 0
+	default: // n, Esc, or anything else cancels
+		m.state = stateRendered
 	}
 	return m, nil
 }
@@ -486,6 +532,10 @@ func (m model) View() string {
 	switch m.state {
 	case stateFirstRun:
 		return m.viewFirstRun()
+	case stateFirstRunBarre:
+		return m.viewFirstRunBarre()
+	case stateConfirmWipe:
+		return m.viewConfirmWipe()
 	case stateSettings:
 		return m.viewSettings()
 	case stateLastChord:
@@ -568,6 +618,35 @@ func (m model) viewFirstRun() string {
 		}
 	}
 	b.WriteString("\n  ↑/↓ select  Enter confirm  Ctrl+C quit\n")
+	return b.String()
+}
+
+func (m model) viewFirstRunBarre() string {
+	var b strings.Builder
+	b.WriteString("Welcome to ripchords!\n\n")
+	b.WriteString("Show barre chords as a single barred line where possible?\n\n")
+	opts := []string{
+		"  Yes — render barres (recommended)",
+		"  No — show every fret individually",
+	}
+	for i, opt := range opts {
+		if i == m.cursor {
+			b.WriteString("> " + opt[2:] + "\n")
+		} else {
+			b.WriteString(opt + "\n")
+		}
+	}
+	b.WriteString("\n  ↑/↓ select  Enter confirm  Ctrl+C quit\n")
+	return b.String()
+}
+
+func (m model) viewConfirmWipe() string {
+	var b strings.Builder
+	b.WriteString(m.viewHeader())
+	b.WriteString("\n")
+	b.WriteString("  Wipe all saved settings and restart setup?\n")
+	b.WriteString("  This clears your input-order and barre preferences.\n")
+	b.WriteString("\n  y wipe config   n / Esc cancel\n")
 	return b.String()
 }
 
