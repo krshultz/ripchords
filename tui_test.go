@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -125,5 +126,82 @@ func TestEditPickEscReturnsToRendered(t *testing.T) {
 	m = feed(m, runes("e"), key(tea.KeyEsc))
 	if m.state != stateRendered {
 		t.Errorf("state = %d, want stateRendered (%d) after Esc from picker", m.state, stateRendered)
+	}
+}
+
+// Issue #17: first run must ask about barre chords, not only input order.
+func TestFirstRunPromptsForBarre(t *testing.T) {
+	t.Setenv("HOME", t.TempDir()) // keep saveConfig off the real config
+
+	m := newModel(Config{}) // empty InputOrder => first run
+	if m.state != stateFirstRun {
+		t.Fatalf("state = %d, want stateFirstRun (%d)", m.state, stateFirstRun)
+	}
+
+	// Pick an input order: Enter must advance to the barre step, not the editor.
+	m = feed(m, key(tea.KeyEnter))
+	if m.state != stateFirstRunBarre {
+		t.Fatalf("after picking order, state = %d, want stateFirstRunBarre (%d)", m.state, stateFirstRunBarre)
+	}
+
+	// Choose "Yes" for barre (Up to the first option), then confirm.
+	m = feed(m, key(tea.KeyUp), key(tea.KeyEnter))
+	if m.state != stateChordName {
+		t.Fatalf("after picking barre, state = %d, want stateChordName (%d)", m.state, stateChordName)
+	}
+	if !m.cfg.ShowBarre {
+		t.Errorf("ShowBarre = false, want true (user chose Yes)")
+	}
+
+	// The choices must persist to disk.
+	if got := loadConfig(); !got.ShowBarre || got.InputOrder != core.PitchOrder {
+		t.Errorf("persisted config = %+v, want pitch order + barre on", got)
+	}
+}
+
+// A single r clears the progression but must not touch the saved config.
+func TestSingleResetClearsProgression(t *testing.T) {
+	m := renderedModel(t)
+	m = feed(m, runes("r"))
+	if m.state != stateRendered {
+		t.Errorf("after single r, state = %d, want stateRendered (%d)", m.state, stateRendered)
+	}
+	if m.session.Len() != 0 {
+		t.Errorf("after single r, Len = %d, want 0", m.session.Len())
+	}
+}
+
+// Issue #18: rr must ask before wiping config; cancelling leaves it intact.
+func TestResetWipeCancelKeepsConfig(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	saveConfig(Config{InputOrder: core.PitchOrder, ShowBarre: true})
+
+	m := renderedModel(t)
+	m = feed(m, runes("r"), runes("r"))
+	if m.state != stateConfirmWipe {
+		t.Fatalf("after rr, state = %d, want stateConfirmWipe (%d)", m.state, stateConfirmWipe)
+	}
+
+	m = feed(m, runes("n"))
+	if m.state != stateRendered {
+		t.Fatalf("after cancel, state = %d, want stateRendered (%d)", m.state, stateRendered)
+	}
+	if _, err := os.Stat(configPath()); err != nil {
+		t.Errorf("config should survive a cancelled wipe, stat err = %v", err)
+	}
+}
+
+// Issue #18: confirming the wipe removes the config and restarts first-run.
+func TestResetWipeConfirmedClearsConfig(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	saveConfig(Config{InputOrder: core.PitchOrder, ShowBarre: true})
+
+	m := renderedModel(t)
+	m = feed(m, runes("r"), runes("r"), runes("y"))
+	if m.state != stateFirstRun {
+		t.Fatalf("after rr y, state = %d, want stateFirstRun (%d)", m.state, stateFirstRun)
+	}
+	if _, err := os.Stat(configPath()); !os.IsNotExist(err) {
+		t.Errorf("config should be removed after confirm, stat err = %v", err)
 	}
 }
