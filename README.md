@@ -4,12 +4,16 @@
 
 ---
 
-## Overview
-Hi, I'm Karl, the designer of Ripchords. I started this project because I needed it to solve some problems. I play the guitar, and I really enjoy improvising. Every now and then I stumble across a chord I really like, and want to write it down. Seems simple enough, right?
+## What it does
 
-It's not simple for me. I don't read music well at all, and when I do, I'm slow. I have trouble remembering the myriad ways to represent a chord visually - chord diagrams? Standard notation? Tablature? If I do a diagram, how is it oriented? There are so many ways.
+Hi, I'm Karl. I play guitar and I love to improvise. Every now and then I stumble
+across a chord I really like and want to write it down — but that's harder than it
+sounds. I don't read music well, and I can never remember the "right" way to draw a
+chord. Diagram? Standard notation? Tablature? Which way up?
 
-I find it easy to describe chords as a string of 6 characters, like `320003` for a simple G Major chord. So why not build something that can translate `320003` into [ASCII tab](https://en.wikipedia.org/wiki/ASCII_tab)? 
+What I *can* do easily is describe a chord as six numbers, one per string — like
+`320003` for a G major. So ripchords does the boring part: you type the fret
+positions, it draws the chord as [ASCII tab](https://en.wikipedia.org/wiki/ASCII_tab).
 
 ```
     G Major
@@ -21,40 +25,74 @@ A |-----2------|
 E |-----3------|
 ```
 
-This way I'm using a somewhat standard format that I see on the internet all the time.  And maybe I'd be able to use the ASCII tab diagrams programmatically as well. Here's what they look like:
+It's a small terminal app. You build up a progression one chord at a time and save
+it to a plain text file you can keep, paste, or share.
 
 ## Installation
-Put it wherever you want. If you build it from source it'll just dump the binary right there onto `$PWD`.
+
+```bash
+go install github.com/krshultz/ripchords@latest
+```
+
+That drops a single self-contained binary on your `PATH`. No internet connection is
+needed to run it — everything happens locally.
 
 ## Usage
-`./ripchords` is a good place to start.
 
-## Examples
+Run `ripchords` with no arguments to start the editor.
+
+**First run** walks you through a quick two-step setup:
+
+1. **Input order** — how you like to type fret positions:
+   - *Pitch order* (low to high): `E A D G B e` — e.g. `x 3 2 0 1 0` for C
+   - *String-number order* (string 1–6): `e B G D A E` — e.g. `0 1 0 2 3 x` for C
+2. **Barre chords** — whether to collapse a barre onto a single line where possible.
+
+Your answers are saved, so you only do this once.
+
+**Entering a chord** is two prompts — a name (optional), then the fret positions:
+
 ```
-➜  ripchords git:(single-chord) ./ripchords 
-ripchords — entering frets in pitch order (E A D G B e)
-Type 'quit' to exit, 'order' to change input order.
+Chord name: C
+Fret positions: x 3 2 0 1 0
 
-Chord name (or press Enter to skip): G Major
-Fret positions: 320003
-
-    G Major
-e |-----3------|
-B |-----0------|
+    C
+e |-----0------|
+B |-----1------|
 G |-----0------|
-D |-----0------|
-A |-----2------|
-E |-----3------|
-
-Save to file? (Enter filename, or press Enter to skip): 
-
-Chord name (or press Enter to skip): ^C
+D |-----2------|
+A |-----3------|
+E |------------|
 ```
+
+Keep going to build a progression. Press `s` to save it to a file when you're done.
+
+## Hotkeys
+
+From the progression view:
+
+| Key  | Action                                                          |
+|------|-----------------------------------------------------------------|
+| `a`  | Add a chord (name, then fret positions)                         |
+| `e`  | Edit a chord you already entered — rename it or fix its frets   |
+| `l`  | Show the last chord on its own                                  |
+| `s`  | Save the progression to a file                                  |
+| `r`  | Reset the progression (clears chords, keeps your settings)      |
+| `rr` | Double-tap `r` to wipe saved config and restart setup (asks first) |
+| `?`  | Open settings (input order, barre rendering)                    |
+| `q`  | Quit                                                            |
+
+`l`, `?`, and `q` also work at the name/fret prompts when the input line is empty,
+and `Esc` backs out of a prompt.
 
 ## Contributing
 
-Not necessary just yet.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Not necessary just yet.
+MIT — see [LICENSE](LICENSE).
+
+---
+
+_Designed by Karl Shultz. Built in collaboration with [Claude Code](https://claude.com/claude-code) — I owned the design and direction; the code was written with AI assistance._
