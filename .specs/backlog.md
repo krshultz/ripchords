@@ -58,6 +58,8 @@
 * Display the chords in a progression by name, e.g. "A minor --> C major --> DSus2".
 
 ## Recently shipped
+* Module-path rename (#24). `go.mod` module became `github.com/krshultz/ripchords`
+  (was bare `ripchords`) so `go install github.com/krshultz/ripchords@latest` works.
 * Edit a fret pattern instead of restarting (#13). From the rendered screen, `e` re-opens
   an already-submitted chord to replace its fret positions — no need to re-enter the whole
   progression to fix a typo.
