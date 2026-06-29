@@ -14,7 +14,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ripchords/core"
+	"github.com/krshultz/ripchords/core"
 )
 
 // version is stamped at build time via -ldflags "-X main.version=...".

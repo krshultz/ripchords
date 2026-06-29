@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ripchords/core"
-	"ripchords/render/ascii"
+	"github.com/krshultz/ripchords/core"
+	"github.com/krshultz/ripchords/render/ascii"
 )
 
 type appState int

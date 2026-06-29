@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"ripchords/core"
+	"github.com/krshultz/ripchords/core"
 )
 
 // stringNames in display order: highest pitch (e) first, lowest (E) last.
