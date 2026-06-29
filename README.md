@@ -8,12 +8,17 @@
 
 Hi, I'm Karl. I play guitar and I love to improvise. Every now and then I stumble
 across a chord I really like and want to write it down — but that's harder than it
-sounds. I don't read music well, and I can never remember the "right" way to draw a
-chord. Diagram? Standard notation? Tablature? Which way up?
+sounds. I don't read music well, and I struggle to remember the "right" way to draw
+a chord. Diagram? Standard notation? Tablature? Which way up? By the time I figure
+it out, I've forgotten the chord.
 
 What I *can* do easily is describe a chord as six numbers, one per string — like
 `320003` for a G major. So ripchords does the boring part: you type the fret
 positions, it draws the chord as [ASCII tab](https://en.wikipedia.org/wiki/ASCII_tab).
+
+Ripchords was designed by me, to solve a problem for me. If I ever take this public,
+I'll look at PRs, but the design direction is always going to be driven by my own
+needs.
 
 ```
     G Major
@@ -95,4 +100,4 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-_Designed by Karl Shultz. Built in collaboration with [Claude Code](https://claude.com/claude-code) — I owned the design and direction; the code was written with AI assistance._
+_Designed by Karl Shultz. Built in collaboration with [Claude Code](https://claude.com/claude-code) — I own the design and direction; the code was written with lots of AI assistance._
