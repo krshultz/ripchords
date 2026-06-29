@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/krshultz/ripchords/compare/v0.2.1...v0.2.2) (2026-06-29)
+
+
+### Bug Fixes
+
+* rename module to github.com/krshultz/ripchords ([#24](https://github.com/krshultz/ripchords/issues/24)) ([c11c51f](https://github.com/krshultz/ripchords/commit/c11c51f884d978f52e55a0216c72d47b77321c11))
+
 ## [0.2.1](https://github.com/krshultz/ripchords/compare/v0.2.0...v0.2.1) (2026-06-25)
 
 
