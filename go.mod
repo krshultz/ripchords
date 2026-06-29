@@ -1,4 +1,4 @@
-module ripchords
+module github.com/krshultz/ripchords
 
 go 1.26.2
 

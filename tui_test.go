@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ripchords/core"
+	"github.com/krshultz/ripchords/core"
 )
 
 // feed drives a sequence of key messages through the model's Update loop and
