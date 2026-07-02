@@ -16,7 +16,7 @@ What I *can* do easily is describe a chord as six numbers, one per string — li
 `320003` for a G major. So ripchords does the boring part: you type the fret
 positions, it draws the chord as [ASCII tab](https://en.wikipedia.org/wiki/ASCII_tab).
 
-Ripchords was designed by me, to solve a problem for me. If I ever take this public,
+Ripchords was designed by me, to solve a problem for me. Now that it's open source,
 I'll look at PRs, but the design direction is always going to be driven by my own
 needs.
 
