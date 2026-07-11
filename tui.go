@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/krshultz/ripchords/core"
 	"github.com/krshultz/ripchords/render/ascii"
@@ -722,7 +723,7 @@ func (m model) viewMain() string {
 	}
 
 	if m.err != "" {
-		b.WriteString("  " + m.err + "\n\n")
+		b.WriteString(lipgloss.NewStyle().Width(w).PaddingLeft(2).Render(m.err) + "\n\n")
 	}
 
 	switch m.state {
