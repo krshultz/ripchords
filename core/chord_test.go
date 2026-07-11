@@ -78,7 +78,7 @@ func TestParseFretsErrors(t *testing.T) {
 		wantInErr string
 	}{
 		{"1 2 3", "expected 6"},
-		{"1 2 3 4 5 6 7", "expected 6"},
+		{"1 2 3 4 5 6 7", "too many"},
 		{"1 2 z 4 5 6", "not a valid fret"},
 		{"1 2 25 4 5 6", "out of range"},
 	}

@@ -49,6 +49,12 @@ func tokenize(input string) []string {
 func ParseFrets(input string, order InputOrder) ([]int, error) {
 	tokens := tokenize(input)
 	if len(tokens) != NumStrings {
+		if len(tokens) > NumStrings {
+			return nil, fmt.Errorf(
+				"%d strings is too many. Frets above 10 use spaces (e.g., \"9 11 11 19 9 9\") so they process as %d",
+				len(tokens), NumStrings,
+			)
+		}
 		return nil, fmt.Errorf(
 			"expected %d string positions, got %d\n  (e.g. \"x 3 2 0 1 0\" or \"x32010\" for C major)",
 			NumStrings, len(tokens),
