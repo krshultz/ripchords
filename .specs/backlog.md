@@ -7,6 +7,18 @@
 ## Core design principles
 * Ripchords must be entirely self contained. No internet access required at all.
 
+## Bugs / open issues
+* Frets >9 in compact (spaceless) input (#26). Space-separated input already handles
+  frets >9 fine (e.g. `x 10 12 12 11 10`); the range check allows 0–24. The bug is only
+  in the compact/spaceless path: `tokenize` in `core/chord.go` splits one char per token
+  when there are no spaces, so `101212111010` → 12 tokens → confusing "expected 6 string
+  positions, got 12" error. Compact spaceless input is fundamentally ambiguous for
+  two-digit frets. **Chosen fix (targeted error):** keep compact form for single-digit
+  frets, but when spaceless input is ambiguous (too many chars to be 6 single-digit
+  positions), emit a clear message telling the user frets above 9 must be space-separated,
+  e.g. `x 10 12 12 11 10`. Touch `ParseFrets`/`tokenize`; add tests in `core/chord_test.go`.
+  Ship as a `fix:` (patch bump).
+
 ## Prompt enhancements still open
 * `(h)` help hotkey inside the editor. The CLI usage screen now exists (shown for
   `-h`/`--help`/`-?`/invalid flags); what remains is surfacing it as an in-editor `h`
@@ -41,6 +53,10 @@
   - Recall by typing the name (autocomplete) vs. picking from a list?
   - Session-only memory, or persisted to disk between runs?
   - Keep the TUI lightweight — avoid clutter.
+* Duplicate a chord in a progression. Copy an existing chord in place so a repeated
+  chord can be added without re-entering its fret positions.
+* Move a chord in a progression. Reorder chords within the progression (e.g. shift a
+  chord earlier or later in the sequence).
 
 ## Settings flow — remaining
 * New settings can be added over time; the toggle-based settings overlay already
