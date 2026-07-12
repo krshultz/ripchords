@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/krshultz/ripchords/compare/v0.2.2...v0.2.3) (2026-07-12)
+
+
+### Bug Fixes
+
+* report clear error for &gt;6 compact fret tokens ([#26](https://github.com/krshultz/ripchords/issues/26)) ([#31](https://github.com/krshultz/ripchords/issues/31)) ([dde3af4](https://github.com/krshultz/ripchords/commit/dde3af4a1715c8a773e9b6c8496c8d4efeeec825))
+* wrap error messages to terminal width ([#30](https://github.com/krshultz/ripchords/issues/30)) ([ff52450](https://github.com/krshultz/ripchords/commit/ff5245001893da5507afbd3a856a57507f2c6e57))
+
 ## [0.2.2](https://github.com/krshultz/ripchords/compare/v0.2.1...v0.2.2) (2026-06-29)
 
 
