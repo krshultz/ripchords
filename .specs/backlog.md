@@ -8,16 +8,11 @@
 * Ripchords must be entirely self contained. No internet access required at all.
 
 ## Bugs / open issues
-* Frets >9 in compact (spaceless) input (#26). Space-separated input already handles
-  frets >9 fine (e.g. `x 10 12 12 11 10`); the range check allows 0–24. The bug is only
-  in the compact/spaceless path: `tokenize` in `core/chord.go` splits one char per token
-  when there are no spaces, so `101212111010` → 12 tokens → confusing "expected 6 string
-  positions, got 12" error. Compact spaceless input is fundamentally ambiguous for
-  two-digit frets. **Chosen fix (targeted error):** keep compact form for single-digit
-  frets, but when spaceless input is ambiguous (too many chars to be 6 single-digit
-  positions), emit a clear message telling the user frets above 9 must be space-separated,
-  e.g. `x 10 12 12 11 10`. Touch `ParseFrets`/`tokenize`; add tests in `core/chord_test.go`.
-  Ship as a `fix:` (patch bump).
+* Misaligned output when frets mix single- and double-digit numbers (#33). A two-digit
+  fret (e.g. `10`, `11`) is one column wider than a single-digit fret, so the closing `|`
+  goes ragged across strings. Fix: pad every fret cell to the width of the widest fret in
+  the diagram so all string lines are equal width and the closing `|` aligns. Likely lives
+  in the render layer (`render/`). Ship as a `fix:` (patch bump).
 
 ## Prompt enhancements still open
 * `(h)` help hotkey inside the editor. The CLI usage screen now exists (shown for
@@ -59,10 +54,20 @@
   chord earlier or later in the sequence).
 
 ## Settings flow — remaining
+* Remove string-number input order — keep pitch order only. String-number ordering
+  (string 1→6) is rarely used; standard notation is pitch order (E A D G B e). Drop the
+  `StringOrder` option, the first-run "choose input order" step, and the settings toggle,
+  leaving pitch order as the sole behavior. Touches `core/chord.go`
+  (`InputOrder`/`StringOrder`, `ParseFrets`), `core/session.go` (`Add`/`EditFrets`
+  signatures), `main.go` (`Config.InputOrder` / `input_order` JSON), and `tui.go`
+  (`stateFirstRun`, `settingsLabels`, the order toggle, and display strings). Consider how
+  existing persisted `input_order` config values are handled on load (migrate/ignore).
 * New settings can be added over time; the toggle-based settings overlay already
-  accommodates this. (Input-order and show-barre toggles are done.)
+  accommodates this. (Show-barre toggle is done; the input-order toggle is being removed
+  — see above.)
 
 ## Longer term goals
+* New 07-13-2026: add ability to display relative minor/major of a single chord, or maybe have relative major/minor in a separate part of the app?
 * Output formats beyond ASCII tab: JPG/PNG, and maybe an animated GIF of transitions.
   (ASCII tab + save-to-file is done.)
 * Ingest chord fret positions as a runtime argument (pass a chord directly on the
@@ -74,6 +79,9 @@
 * Display the chords in a progression by name, e.g. "A minor --> C major --> DSus2".
 
 ## Recently shipped
+* Clear error for frets >9 in compact input (#26). Spaceless input like `101212111010`
+  is ambiguous for two-digit frets; it now emits a targeted message telling the user to
+  space-separate (e.g. `x 10 12 12 11 10`) instead of a confusing token-count error.
 * Module-path rename (#24). `go.mod` module became `github.com/krshultz/ripchords`
   (was bare `ripchords`) so `go install github.com/krshultz/ripchords@latest` works.
 * Edit a fret pattern instead of restarting (#13). From the rendered screen, `e` re-opens
