@@ -46,10 +46,11 @@ func stringSegment(fret, barre int, mini bool) string {
 		marker = strconv.Itoa(fret)
 	}
 	showMark := (mini && fret == barre) || (!mini && barre > 0 && fret > 0)
+	tail := strings.Repeat("-", 7-len(marker)) + "|"
 	if showMark {
-		return "|---|-" + marker + "------|"
+		return "|---|-" + marker + tail
 	}
-	return "|-----" + marker + "------|"
+	return "|-----" + marker + tail
 }
 
 // RenderChord returns an ASCII tab diagram for a single chord. frets must be in pitch order.
