@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/krshultz/ripchords/compare/v0.2.3...v0.2.4) (2026-07-17)
+
+
+### Bug Fixes
+
+* align tab columns properly when single- and double-digit fret posns are used ([#35](https://github.com/krshultz/ripchords/issues/35)) ([59fb809](https://github.com/krshultz/ripchords/commit/59fb8098785ffe25d7bf0adf7a503fd6950f5df8))
+
 ## [0.2.3](https://github.com/krshultz/ripchords/compare/v0.2.2...v0.2.3) (2026-07-12)
 
 
