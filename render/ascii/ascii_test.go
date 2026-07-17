@@ -53,6 +53,36 @@ func TestRenderChordBarreMutedString(t *testing.T) {
 	}
 }
 
+func TestRenderChordDWithSomeDoubleDigitFrets(t *testing.T) {
+	// Issue 33: C# chord: barre at 9, play all strings
+	frets := []int{9, 11, 11, 10, 9, 9}
+	diagram := RenderChord("C#", frets, false)
+	if !strings.Contains(diagram, "E |-----9------|") {
+		t.Errorf("E string should still be aligned, got:\n%s", diagram)
+	}
+	if !strings.Contains(diagram, "G |-----10-----|") {
+		t.Errorf("G string should correct for double digits, got:\n%s", diagram)
+	}
+	if !strings.Contains(diagram, "D |-----11-----|") {
+		t.Errorf("D string should correct for double digits, got:\n%s", diagram)
+	}
+}
+
+func TestRenderChordDWithAllDoubleDigitFrets(t *testing.T) {
+	// Issue 33: E minor chord, full barre
+	frets := []int{12, 14, 14, 12, 12, 12}
+	diagram := RenderChord("Emin", frets, false)
+	if !strings.Contains(diagram, "E |-----12-----|") {
+		t.Errorf("E string should be aligned, got:\n%s", diagram)
+	}
+	if !strings.Contains(diagram, "A |-----14-----|") {
+		t.Errorf("A string should be aligned, got:\n%s", diagram)
+	}
+	if !strings.Contains(diagram, "e |-----12-----|") {
+		t.Errorf("e string should be aligned, got:\n%s", diagram)
+	}
+}
+
 func TestRenderChordMutedAsX(t *testing.T) {
 	// C chord: E muted, others have frets
 	frets := []int{-1, 3, 2, 0, 1, 0}
