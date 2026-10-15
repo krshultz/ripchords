@@ -32,6 +32,9 @@
 
   Note: the progression is already shown live above the prompt, so a dedicated `(p)`
   "print progression" hotkey may be redundant — decide whether it's still wanted.
+* Show which chord is being worked on when adding or editing (#37). Name the pending chord
+  on the add-frets prompt; on the edit-frets prompt show the current positions in place of
+  the `(E A D G B e)` guide line once #48 lands.
 * Make Rename discoverable (#46). Rename already works (`e` → pick chord → Rename) but the
   help bar only says `e edit chord`. Surface it in the help bar, `-h` usage text, and README.
 * Reprint the fret positions the user entered (#44). Show a chord's positions as text
@@ -43,11 +46,12 @@
   - There's no on-screen hint that `Esc` cancels.
   - At the fret step, `Esc` only steps *back* to the name prompt; it doesn't abort the add.
   - When entering the very first chord (empty progression), there's no way to back out.
-* Reuse a chord already entered this session. When notating a progression that repeats
+* Reuse a chord already entered this session (#49). When notating a progression that repeats
   chords (e.g. Bmin7 and DMaj several times each), the user shouldn't have to re-type the
   fret positions. Recall a prior chord by name. Open design questions:
   - Recall by typing the name (autocomplete) vs. picking from a list?
-  - Session-only memory, or persisted to disk between runs?
+  - ~~Session-only memory, or persisted to disk between runs?~~ Persisted — #49 proposes a
+    JSON chord library in `~/.ripchords/` that every entered chord is added to.
   - Keep the TUI lightweight — avoid clutter.
 * Duplicate a chord in a progression. Copy an existing chord in place so a repeated
   chord can be added without re-entering its fret positions.
@@ -61,7 +65,7 @@
   runtime-argument items under Longer term goals.
 
 ## Settings flow — remaining
-* Remove string-number input order — keep pitch order only. String-number ordering
+* Remove string-number input order — keep pitch order only (#48). String-number ordering
   (string 1→6) is rarely used; standard notation is pitch order (E A D G B e). Drop the
   `StringOrder` option, the first-run "choose input order" step, and the settings toggle,
   leaving pitch order as the sole behavior. Touches `core/chord.go`
@@ -85,7 +89,7 @@
   logic backs both this runtime flow and the "import from CSV" flow below.
 * Import a list of chords, perhaps as a CSV file. (Same file format / load path as #43.)
 * Internal database for reverse lookup: input fret positions, get a chord name back
-  ("what chord is this?").
+  ("what chord is this?"). The chord library in #49 is the natural first data source.
 * Display the chords in a progression by name, e.g. "A minor --> C major --> DSus2".
 
 ## Recently shipped
