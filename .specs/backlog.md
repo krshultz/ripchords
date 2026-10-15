@@ -8,11 +8,7 @@
 * Ripchords must be entirely self contained. No internet access required at all.
 
 ## Bugs / open issues
-* Misaligned output when frets mix single- and double-digit numbers (#33). A two-digit
-  fret (e.g. `10`, `11`) is one column wider than a single-digit fret, so the closing `|`
-  goes ragged across strings. Fix: pad every fret cell to the width of the widest fret in
-  the diagram so all string lines are equal width and the closing `|` aligns. Likely lives
-  in the render layer (`render/`). Ship as a `fix:` (patch bump).
+* (none currently — see GitHub issues for anything new)
 
 ## Prompt enhancements still open
 * `(h)` help hotkey inside the editor. The CLI usage screen now exists (shown for
@@ -36,6 +32,11 @@
 
   Note: the progression is already shown live above the prompt, so a dedicated `(p)`
   "print progression" hotkey may be redundant — decide whether it's still wanted.
+* Make Rename discoverable (#46). Rename already works (`e` → pick chord → Rename) but the
+  help bar only says `e edit chord`. Surface it in the help bar, `-h` usage text, and README.
+* Reprint the fret positions the user entered (#44). Show a chord's positions as text
+  (e.g. `x 3 2 0 1 0`) in the `l` last-chord view and the `e` picker. Needs a canonical
+  fret formatter built from `Chord.Frets`; the same formatter should back #37 and #45.
 
 ## Editing & reuse (new)
 * Cancel entering a chord — close the gaps. `Esc` already cancels at the name step, but:
@@ -50,8 +51,14 @@
   - Keep the TUI lightweight — avoid clutter.
 * Duplicate a chord in a progression. Copy an existing chord in place so a repeated
   chord can be added without re-entering its fret positions.
-* Move a chord in a progression. Reorder chords within the progression (e.g. shift a
-  chord earlier or later in the sequence).
+* Move a chord in a progression (#42). Reorder chords within the progression (e.g. shift a
+  chord earlier or later in the sequence) via a Move action in the `e` edit menu.
+* Remove a chord from a progression (#41). Drop a single chord via the `e` edit menu
+  instead of resetting the whole progression.
+* Start a new progression from the current one — template / "Save As" (#43). Needs a
+  loadable progression file format (JSON or CSV; no network) and a load path, since `s`
+  today only writes ASCII output. Shares a parse/build path with the CSV-import and
+  runtime-argument items under Longer term goals.
 
 ## Settings flow — remaining
 * Remove string-number input order — keep pitch order only. String-number ordering
@@ -62,6 +69,9 @@
   signatures), `main.go` (`Config.InputOrder` / `input_order` JSON), and `tui.go`
   (`stateFirstRun`, `settingsLabels`, the order toggle, and display strings). Consider how
   existing persisted `input_order` config values are handled on load (migrate/ignore).
+* Show fret positions below each diagram (#45). A settings toggle (off by default) that
+  prints each chord's positions under its diagram so pasted output is self-documenting.
+  Depends on the fret formatter from #44.
 * New settings can be added over time; the toggle-based settings overlay already
   accommodates this. (Show-barre toggle is done; the input-order toggle is being removed
   — see above.)
@@ -73,12 +83,15 @@
 * Ingest chord fret positions as a runtime argument (pass a chord directly on the
   command line instead of entering it interactively). Ideally the same parsing/build
   logic backs both this runtime flow and the "import from CSV" flow below.
-* Import a list of chords, perhaps as a CSV file.
+* Import a list of chords, perhaps as a CSV file. (Same file format / load path as #43.)
 * Internal database for reverse lookup: input fret positions, get a chord name back
   ("what chord is this?").
 * Display the chords in a progression by name, e.g. "A minor --> C major --> DSus2".
 
 ## Recently shipped
+* Misaligned output when frets mix single- and double-digit numbers (#33, fixed in #35,
+  released in 0.2.4). Every fret cell is now padded to the width of the widest fret in the
+  diagram so the closing `|` aligns across strings.
 * Clear error for frets >9 in compact input (#26). Spaceless input like `101212111010`
   is ambiguous for two-digit frets; it now emits a targeted message telling the user to
   space-separate (e.g. `x 10 12 12 11 10`) instead of a confusing token-count error.
