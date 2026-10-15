@@ -8,11 +8,7 @@
 * Ripchords must be entirely self contained. No internet access required at all.
 
 ## Bugs / open issues
-* Misaligned output when frets mix single- and double-digit numbers (#33). A two-digit
-  fret (e.g. `10`, `11`) is one column wider than a single-digit fret, so the closing `|`
-  goes ragged across strings. Fix: pad every fret cell to the width of the widest fret in
-  the diagram so all string lines are equal width and the closing `|` aligns. Likely lives
-  in the render layer (`render/`). Ship as a `fix:` (patch bump).
+* (none currently — see GitHub issues for anything new)
 
 ## Prompt enhancements still open
 * `(h)` help hotkey inside the editor. The CLI usage screen now exists (shown for
@@ -93,6 +89,9 @@
 * Display the chords in a progression by name, e.g. "A minor --> C major --> DSus2".
 
 ## Recently shipped
+* Misaligned output when frets mix single- and double-digit numbers (#33, fixed in #35,
+  released in 0.2.4). Every fret cell is now padded to the width of the widest fret in the
+  diagram so the closing `|` aligns across strings.
 * Clear error for frets >9 in compact input (#26). Spaceless input like `101212111010`
   is ambiguous for two-digit frets; it now emits a targeted message telling the user to
   space-separate (e.g. `x 10 12 12 11 10`) instead of a confusing token-count error.
