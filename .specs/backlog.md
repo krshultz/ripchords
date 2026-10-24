@@ -11,10 +11,10 @@
 * (none currently — see GitHub issues for anything new)
 
 ## Prompt enhancements still open
-* `(h)` help hotkey inside the editor. The CLI usage screen now exists (shown for
+* `(h)` help hotkey inside the editor (#51). The CLI usage screen now exists (shown for
   `-h`/`--help`/`-?`/invalid flags); what remains is surfacing it as an in-editor `h`
   hotkey alongside `l`, `?`, `r`, `q`.
-* Settings hotkey binding: the original spec called for `(s)` to open settings. Today
+* Settings hotkey binding (#52): the original spec called for `(s)` to open settings. Today
   `?` opens settings and `s` is bound to "save." Decide on the final bindings.
 
   Example prompt the spec was aiming for, once a chord has been added:
@@ -42,7 +42,7 @@
   fret formatter built from `Chord.Frets`; the same formatter should back #37 and #45.
 
 ## Editing & reuse (new)
-* Cancel entering a chord — close the gaps. `Esc` already cancels at the name step, but:
+* Cancel entering a chord — close the gaps (#53). `Esc` already cancels at the name step, but:
   - There's no on-screen hint that `Esc` cancels.
   - At the fret step, `Esc` only steps *back* to the name prompt; it doesn't abort the add.
   - When entering the very first chord (empty progression), there's no way to back out.
@@ -53,7 +53,7 @@
   - ~~Session-only memory, or persisted to disk between runs?~~ Persisted — #49 proposes a
     JSON chord library in `~/.ripchords/` that every entered chord is added to.
   - Keep the TUI lightweight — avoid clutter.
-* Duplicate a chord in a progression. Copy an existing chord in place so a repeated
+* Duplicate a chord in a progression (#54). Copy an existing chord in place so a repeated
   chord can be added without re-entering its fret positions.
 * Move a chord in a progression (#42). Reorder chords within the progression (e.g. shift a
   chord earlier or later in the sequence) via a Move action in the `e` edit menu.
@@ -62,7 +62,14 @@
 * Start a new progression from the current one — template / "Save As" (#43). Needs a
   loadable progression file format (JSON or CSV; no network) and a load path, since `s`
   today only writes ASCII output. Shares a parse/build path with the CSV-import and
-  runtime-argument items under Longer term goals.
+  runtime-argument items under Longer term goals (#57, #58).
+
+## Output
+* Print a single chord diagram (#38). Select one chord from the progression and print
+  only that diagram.
+* Configurable display width (#40). Today diagrams print side by side in rows; add an
+  option to print one chord per row for easier copy/paste of a single chord. Leaning
+  toward a toggle (one per row vs. in series) over full customization.
 
 ## Settings flow — remaining
 * Remove string-number input order — keep pitch order only (#48). String-number ordering
@@ -81,16 +88,19 @@
   — see above.)
 
 ## Longer term goals
-* New 07-13-2026: add ability to display relative minor/major of a single chord, or maybe have relative major/minor in a separate part of the app?
-* Output formats beyond ASCII tab: JPG/PNG, and maybe an animated GIF of transitions.
+* Show the relative minor/major of a chord (#55). Added 07-13-2026: display the relative
+  minor/major of a single chord, or maybe show it in a separate part of the app?
+* Output formats beyond ASCII tab (#56): JPG/PNG, and maybe an animated GIF of transitions.
   (ASCII tab + save-to-file is done.)
-* Ingest chord fret positions as a runtime argument (pass a chord directly on the
+* Copy output straight to the clipboard (#39), so diagrams can be pasted into an email or
+  forum post without going through a saved file.
+* Ingest chord fret positions as a runtime argument (#57) (pass a chord directly on the
   command line instead of entering it interactively). Ideally the same parsing/build
   logic backs both this runtime flow and the "import from CSV" flow below.
-* Import a list of chords, perhaps as a CSV file. (Same file format / load path as #43.)
-* Internal database for reverse lookup: input fret positions, get a chord name back
+* Import a list of chords, perhaps as a CSV file (#58). (Same file format / load path as #43.)
+* Internal database for reverse lookup (#59): input fret positions, get a chord name back
   ("what chord is this?"). The chord library in #49 is the natural first data source.
-* Display the chords in a progression by name, e.g. "A minor --> C major --> DSus2".
+* Display the chords in a progression by name (#60), e.g. "A minor --> C major --> DSus2".
 
 ## Recently shipped
 * Misaligned output when frets mix single- and double-digit numbers (#33, fixed in #35,
@@ -106,3 +116,12 @@
   progression to fix a typo.
 * Rename a chord (#13). `e` → pick a chord → Rename changes the name of a chord already
   entered this session without re-entering fret positions.
+* Error messages wrap to the terminal width (#30, released in 0.2.3) instead of running off
+  the edge of the screen.
+* README rewritten for the TUI, MIT LICENSE added (#23), and README updated now that the
+  project is open source (#29).
+* First-run setup prompts for the barre option, and `rr` asks for confirmation before
+  wiping config instead of relying on a 500ms double-tap (#17, #18; fixed in #20, released
+  in 0.2.1).
+* Dev tooling (#19): golangci-lint, CI and PR-check workflows (Conventional Commits PR
+  titles, branch names), a pre-commit hook, and CONTRIBUTING.md.
