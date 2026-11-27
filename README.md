@@ -44,16 +44,11 @@ needed to run it — everything happens locally.
 
 ## Usage
 
-Run `ripchords` with no arguments to start the editor.
+Run `ripchords` with no arguments to start the editor. There's no setup step:
+it opens straight at the first chord prompt.
 
-**First run** walks you through a quick two-step setup:
-
-1. **Input order** — how you like to type fret positions:
-   - *Pitch order* (low to high): `E A D G B e` — e.g. `x 3 2 0 1 0` for C
-   - *String-number order* (string 1–6): `e B G D A E` — e.g. `0 1 0 2 3 x` for C
-2. **Barre chords** — whether to collapse a barre onto a single line where possible.
-
-Your answers are saved, so you only do this once.
+Fret positions are always typed **low to high pitch**, one per string:
+`E A D G B e`. So `x 3 2 0 1 0` is a C chord.
 
 **Entering a chord** is two prompts — a name (optional), then the fret positions:
 
@@ -96,8 +91,8 @@ From the progression view:
 | `l`  | Show the last chord on its own                                  |
 | `s`  | Save the progression to a file                                  |
 | `r`  | Reset the progression (clears chords, keeps your settings)      |
-| `rr` | Double-tap `r` to wipe saved config and restart setup (asks first) |
-| `?`  | Open settings (input order, barre rendering)                    |
+| `rr` | Double-tap `r` to reset settings to their defaults (asks first) |
+| `?`  | Open settings (barre rendering)                                 |
 | `q`  | Quit                                                            |
 
 `l`, `?`, and `q` also work at the name/fret prompts when the input line is empty,

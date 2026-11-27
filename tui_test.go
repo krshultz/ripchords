@@ -2,11 +2,11 @@ package main
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-
-	"github.com/krshultz/ripchords/core"
 )
 
 // feed drives a sequence of key messages through the model's Update loop and
@@ -27,11 +27,11 @@ func key(t tea.KeyType) tea.KeyMsg { return tea.KeyMsg{Type: t} }
 // rendered (hotkeys-active) state.
 func renderedModel(t *testing.T) model {
 	t.Helper()
-	m := newModel(Config{InputOrder: core.PitchOrder, ShowBarre: true})
-	if _, err := m.session.Add("C", "x 3 2 0 1 0", core.PitchOrder); err != nil {
+	m := newModel(Config{ShowBarre: true})
+	if _, err := m.session.Add("C", "x 3 2 0 1 0"); err != nil {
 		t.Fatalf("seed C: %v", err)
 	}
-	if _, err := m.session.Add("G", "3 2 0 0 0 3", core.PitchOrder); err != nil {
+	if _, err := m.session.Add("G", "3 2 0 0 0 3"); err != nil {
 		t.Fatalf("seed G: %v", err)
 	}
 	m.state = stateRendered
@@ -129,33 +129,44 @@ func TestEditPickEscReturnsToRendered(t *testing.T) {
 	}
 }
 
-// Issue #17: first run must ask about barre chords, not only input order.
-func TestFirstRunPromptsForBarre(t *testing.T) {
-	t.Setenv("HOME", t.TempDir()) // keep saveConfig off the real config
+// Issue #48: there is no first-run setup any more. Even with no saved config,
+// the editor opens straight at the chord-name prompt with barre display on.
+func TestNoConfigStartsAtChordName(t *testing.T) {
+	t.Setenv("HOME", t.TempDir()) // no config file on disk
 
-	m := newModel(Config{}) // empty InputOrder => first run
-	if m.state != stateFirstRun {
-		t.Fatalf("state = %d, want stateFirstRun (%d)", m.state, stateFirstRun)
-	}
-
-	// Pick an input order: Enter must advance to the barre step, not the editor.
-	m = feed(m, key(tea.KeyEnter))
-	if m.state != stateFirstRunBarre {
-		t.Fatalf("after picking order, state = %d, want stateFirstRunBarre (%d)", m.state, stateFirstRunBarre)
-	}
-
-	// Choose "Yes" for barre (Up to the first option), then confirm.
-	m = feed(m, key(tea.KeyUp), key(tea.KeyEnter))
+	m := newModel(loadConfig())
 	if m.state != stateChordName {
-		t.Fatalf("after picking barre, state = %d, want stateChordName (%d)", m.state, stateChordName)
+		t.Fatalf("state = %d, want stateChordName (%d)", m.state, stateChordName)
 	}
 	if !m.cfg.ShowBarre {
-		t.Errorf("ShowBarre = false, want true (user chose Yes)")
+		t.Error("ShowBarre = false, want true (the default)")
+	}
+}
+
+// Issue #48: a config written by an older version still has "input_order".
+// It must load without error, and the next save must drop the field.
+func TestLegacyInputOrderIgnoredAndDropped(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if err := os.MkdirAll(filepath.Dir(configPath()), 0755); err != nil {
+		t.Fatal(err)
+	}
+	legacy := `{"input_order": "string_number", "show_barre": false}`
+	if err := os.WriteFile(configPath(), []byte(legacy), 0644); err != nil {
+		t.Fatal(err)
 	}
 
-	// The choices must persist to disk.
-	if got := loadConfig(); !got.ShowBarre || got.InputOrder != core.PitchOrder {
-		t.Errorf("persisted config = %+v, want pitch order + barre on", got)
+	cfg := loadConfig()
+	if cfg.ShowBarre {
+		t.Error("ShowBarre = true, want false (from the legacy file)")
+	}
+
+	saveConfig(cfg)
+	data, err := os.ReadFile(configPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "input_order") {
+		t.Errorf("saved config still has input_order:\n%s", data)
 	}
 }
 
@@ -174,7 +185,7 @@ func TestSingleResetClearsProgression(t *testing.T) {
 // Issue #18: rr must ask before wiping config; cancelling leaves it intact.
 func TestResetWipeCancelKeepsConfig(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	saveConfig(Config{InputOrder: core.PitchOrder, ShowBarre: true})
+	saveConfig(Config{ShowBarre: false})
 
 	m := renderedModel(t)
 	m = feed(m, runes("r"), runes("r"))
@@ -191,17 +202,39 @@ func TestResetWipeCancelKeepsConfig(t *testing.T) {
 	}
 }
 
-// Issue #18: confirming the wipe removes the config and restarts first-run.
+// Issue #18: confirming the reset removes the config. Since #48 there is no
+// first-run setup, so it lands on the chord-name prompt with default settings.
 func TestResetWipeConfirmedClearsConfig(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	saveConfig(Config{InputOrder: core.PitchOrder, ShowBarre: true})
+	saveConfig(Config{ShowBarre: false})
 
 	m := renderedModel(t)
 	m = feed(m, runes("r"), runes("r"), runes("y"))
-	if m.state != stateFirstRun {
-		t.Fatalf("after rr y, state = %d, want stateFirstRun (%d)", m.state, stateFirstRun)
+	if m.state != stateChordName {
+		t.Fatalf("after rr y, state = %d, want stateChordName (%d)", m.state, stateChordName)
+	}
+	if !m.cfg.ShowBarre {
+		t.Error("after rr y, ShowBarre = false, want true (the default)")
 	}
 	if _, err := os.Stat(configPath()); !os.IsNotExist(err) {
 		t.Errorf("config should be removed after confirm, stat err = %v", err)
+	}
+}
+
+// Issue #48: with the input-order row gone, barre is the first settings row,
+// so Space on the default cursor must toggle it.
+func TestSettingsSpaceTogglesBarre(t *testing.T) {
+	t.Setenv("HOME", t.TempDir()) // closing settings saves the config
+
+	m := renderedModel(t)
+	m = feed(m, runes("?"), key(tea.KeySpace), key(tea.KeyEsc))
+	if m.state != stateRendered {
+		t.Fatalf("after closing settings, state = %d, want stateRendered (%d)", m.state, stateRendered)
+	}
+	if m.cfg.ShowBarre {
+		t.Error("ShowBarre = true after one toggle, want false")
+	}
+	if loadConfig().ShowBarre {
+		t.Error("toggled ShowBarre was not saved")
 	}
 }

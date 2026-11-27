@@ -17,19 +17,17 @@ import (
 type appState int
 
 const (
-	stateFirstRun      appState = iota // first-run: choosing input order
-	stateFirstRunBarre                 // first-run: choosing barre on/off
-	stateChordName                     // waiting for chord name
-	stateFrets                         // waiting for fret positions
-	stateRendered                      // showing progression, hotkeys active
-	stateSave                          // waiting for filename
-	stateSettings                      // settings overlay
-	stateLastChord                     // showing last chord modal
-	stateConfirmWipe                   // confirming a full config wipe
-	stateEditPick                      // choosing which chord to edit
-	stateEditAction                    // choosing rename vs edit frets
-	stateEditName                      // entering a new name for the chosen chord
-	stateEditFrets                     // entering new fret positions for the chosen chord
+	stateChordName   appState = iota // waiting for chord name
+	stateFrets                       // waiting for fret positions
+	stateRendered                    // showing progression, hotkeys active
+	stateSave                        // waiting for filename
+	stateSettings                    // settings overlay
+	stateLastChord                   // showing last chord modal
+	stateConfirmWipe                 // confirming a reset of saved settings
+	stateEditPick                    // choosing which chord to edit
+	stateEditAction                  // choosing rename vs edit frets
+	stateEditName                    // entering a new name for the chosen chord
+	stateEditFrets                   // entering new fret positions for the chosen chord
 )
 
 type model struct {
@@ -59,16 +57,12 @@ func newModel(cfg Config) model {
 	ti.Focus()
 	m := model{
 		cfg:    cfg,
+		state:  stateChordName,
 		input:  ti,
 		width:  80,
 		height: 24,
 	}
-	if cfg.InputOrder == "" {
-		m.state = stateFirstRun
-	} else {
-		m.state = stateChordName
-		m.input.Prompt = chordNamePrompt(m.session.Len())
-	}
+	m.input.Prompt = chordNamePrompt(m.session.Len())
 	return m
 }
 
@@ -95,10 +89,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch m.state {
-	case stateFirstRun:
-		return m.handleFirstRun(msg)
-	case stateFirstRunBarre:
-		return m.handleFirstRunBarre(msg)
 	case stateConfirmWipe:
 		return m.handleConfirmWipe(msg)
 	case stateChordName:
@@ -121,59 +111,6 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEditName(msg)
 	case stateEditFrets:
 		return m.handleEditFrets(msg)
-	}
-	return m, nil
-}
-
-func (m model) handleFirstRun(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyCtrlC:
-		return m, tea.Quit
-	case tea.KeyUp:
-		if m.cursor > 0 {
-			m.cursor--
-		}
-	case tea.KeyDown:
-		if m.cursor < 1 {
-			m.cursor++
-		}
-	case tea.KeyEnter:
-		if m.cursor == 0 {
-			m.cfg.InputOrder = core.PitchOrder
-		} else {
-			m.cfg.InputOrder = core.StringOrder
-		}
-		// Advance to the barre choice; config is saved once both are picked.
-		m.state = stateFirstRunBarre
-		m.cursor = 0
-		if !m.cfg.ShowBarre {
-			m.cursor = 1
-		}
-		return m, nil
-	}
-	return m, nil
-}
-
-func (m model) handleFirstRunBarre(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyCtrlC:
-		return m, tea.Quit
-	case tea.KeyUp:
-		if m.cursor > 0 {
-			m.cursor--
-		}
-	case tea.KeyDown:
-		if m.cursor < 1 {
-			m.cursor++
-		}
-	case tea.KeyEnter:
-		m.cfg.ShowBarre = m.cursor == 0
-		saveConfig(m.cfg)
-		m.state = stateChordName
-		m.input.Prompt = chordNamePrompt(m.session.Len())
-		m.input.SetValue("")
-		m.cursor = 0
-		return m, textinput.Blink
 	}
 	return m, nil
 }
@@ -224,7 +161,7 @@ func (m model) handleFrets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case tea.KeyEnter:
 		val := strings.TrimSpace(m.input.Value())
-		if _, err := m.session.Add(m.pendingName, val, m.cfg.InputOrder); err != nil {
+		if _, err := m.session.Add(m.pendingName, val); err != nil {
 			m.err = err.Error()
 			m.input.SetValue("")
 			return m, nil
@@ -297,8 +234,8 @@ func (m model) handleRendered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "r":
 		now := time.Now()
 		if !m.lastR.IsZero() && now.Sub(m.lastR) <= 500*time.Millisecond {
-			// Second quick r: don't wipe yet — ask for confirmation first, so
-			// an accidental double-tap can't destroy the saved config.
+			// Second quick r: don't reset yet — ask for confirmation first, so
+			// an accidental double-tap can't throw away the saved settings.
 			m.lastR = time.Time{}
 			m.state = stateConfirmWipe
 		} else {
@@ -322,8 +259,11 @@ func (m model) handleConfirmWipe(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		os.Remove(configPath()) //nolint
 		m.cfg = Config{ShowBarre: true}
 		m.session.Reset()
-		m.state = stateFirstRun
-		m.cursor = 0
+		m.err = ""
+		m.state = stateChordName
+		m.input.Prompt = chordNamePrompt(m.session.Len())
+		m.input.SetValue("")
+		return m, textinput.Blink
 	default: // n, Esc, or anything else cancels
 		m.state = stateRendered
 	}
@@ -370,7 +310,7 @@ func (m model) handleSave(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-var settingsLabels = []string{"Input order", "Show barre chords"}
+var settingsLabels = []string{"Show barre chords"}
 
 func (m model) handleSettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
@@ -394,12 +334,6 @@ func (m model) handleSettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeySpace:
 		switch m.cursor {
 		case 0:
-			if m.cfg.InputOrder == core.PitchOrder {
-				m.cfg.InputOrder = core.StringOrder
-			} else {
-				m.cfg.InputOrder = core.PitchOrder
-			}
-		case 1:
 			m.cfg.ShowBarre = !m.cfg.ShowBarre
 		}
 	}
@@ -508,7 +442,7 @@ func (m model) handleEditFrets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case tea.KeyEnter:
 		val := strings.TrimSpace(m.input.Value())
-		if err := m.session.EditFrets(m.editIdx, val, m.cfg.InputOrder); err != nil {
+		if err := m.session.EditFrets(m.editIdx, val); err != nil {
 			m.err = err.Error()
 			m.input.SetValue("")
 			return m, nil
@@ -531,10 +465,6 @@ func (m model) handleEditFrets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	switch m.state {
-	case stateFirstRun:
-		return m.viewFirstRun()
-	case stateFirstRunBarre:
-		return m.viewFirstRunBarre()
 	case stateConfirmWipe:
 		return m.viewConfirmWipe()
 	case stateSettings:
@@ -603,51 +533,13 @@ func (m model) viewEditAction() string {
 	return b.String()
 }
 
-func (m model) viewFirstRun() string {
-	var b strings.Builder
-	b.WriteString("Welcome to ripchords!\n\n")
-	b.WriteString("How do you prefer to enter fret positions?\n\n")
-	opts := []string{
-		`  Pitch order (low to high): E A D G B e  —  e.g. "x 3 2 0 1 0" for C`,
-		`  String-number order (string 1–6): e B G D A E  —  e.g. "0 1 0 2 3 x" for C`,
-	}
-	for i, opt := range opts {
-		if i == m.cursor {
-			b.WriteString("> " + opt[2:] + "\n")
-		} else {
-			b.WriteString(opt + "\n")
-		}
-	}
-	b.WriteString("\n  ↑/↓ select  Enter confirm  Ctrl+C quit\n")
-	return b.String()
-}
-
-func (m model) viewFirstRunBarre() string {
-	var b strings.Builder
-	b.WriteString("Welcome to ripchords!\n\n")
-	b.WriteString("Show barre chords as a single barred line where possible?\n\n")
-	opts := []string{
-		"  Yes — render barres (recommended)",
-		"  No — show every fret individually",
-	}
-	for i, opt := range opts {
-		if i == m.cursor {
-			b.WriteString("> " + opt[2:] + "\n")
-		} else {
-			b.WriteString(opt + "\n")
-		}
-	}
-	b.WriteString("\n  ↑/↓ select  Enter confirm  Ctrl+C quit\n")
-	return b.String()
-}
-
 func (m model) viewConfirmWipe() string {
 	var b strings.Builder
 	b.WriteString(m.viewHeader())
 	b.WriteString("\n")
-	b.WriteString("  Wipe all saved settings and restart setup?\n")
-	b.WriteString("  This clears your input-order and barre preferences.\n")
-	b.WriteString("\n  y wipe config   n / Esc cancel\n")
+	b.WriteString("  Reset all settings to their defaults?\n")
+	b.WriteString("  This also clears the progression.\n")
+	b.WriteString("\n  y reset   n / Esc cancel\n")
 	return b.String()
 }
 
@@ -668,15 +560,11 @@ func (m model) viewSettings() string {
 	b.WriteString("  Settings\n")
 	b.WriteString("  " + strings.Repeat("─", 38) + "\n")
 
-	orderVal := "pitch (E A D G B e)"
-	if m.cfg.InputOrder == core.StringOrder {
-		orderVal = "string (e B G D A E)"
-	}
 	barreVal := "off"
 	if m.cfg.ShowBarre {
 		barreVal = "on"
 	}
-	values := []string{orderVal, barreVal}
+	values := []string{barreVal}
 
 	for i, label := range settingsLabels {
 		prefix := "    "
@@ -700,11 +588,7 @@ func (m model) viewLastChord() string {
 }
 
 func (m model) viewHeader() string {
-	order := "pitch"
-	if m.cfg.InputOrder == core.StringOrder {
-		order = "string"
-	}
-	return fmt.Sprintf("ripchords — %s order  |  l last chord  |  ? settings  |  r reset  |  q quit\n", order)
+	return "ripchords  |  l last chord  |  ? settings  |  r reset  |  q quit\n"
 }
 
 func (m model) viewMain() string {
@@ -732,17 +616,13 @@ func (m model) viewMain() string {
 		b.WriteString(m.input.View() + "\n")
 	case stateFrets:
 		fmt.Fprintf(&b, "  Num chords: %d\n", m.session.Len())
-		order := "E A D G B e"
-		if m.cfg.InputOrder == core.StringOrder {
-			order = "e B G D A E"
-		}
-		b.WriteString("  (" + order + ")\n")
+		b.WriteString("  (E A D G B e)\n")
 		b.WriteString(m.input.View() + "\n")
 	case stateRendered:
 		if m.session.Len() == 0 {
 			b.WriteString("  (progression cleared)\n\n")
 		}
-		b.WriteString("  a add chord  e edit chord  l last chord  s save  r reset  rr wipe config  ? settings  q quit\n")
+		b.WriteString("  a add chord  e edit chord  l last chord  s save  r reset  rr reset settings  ? settings  q quit\n")
 	case stateSave:
 		b.WriteString(m.input.View() + "\n")
 	case stateEditName:
@@ -750,11 +630,7 @@ func (m model) viewMain() string {
 		b.WriteString(m.input.View() + "\n")
 	case stateEditFrets:
 		fmt.Fprintf(&b, "  Editing chord %d frets\n", m.editIdx+1)
-		order := "E A D G B e"
-		if m.cfg.InputOrder == core.StringOrder {
-			order = "e B G D A E"
-		}
-		b.WriteString("  (" + order + ")\n")
+		b.WriteString("  (E A D G B e)\n")
 		b.WriteString(m.input.View() + "\n")
 	}
 

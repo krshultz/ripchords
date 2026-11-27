@@ -31,7 +31,7 @@ func TestTokenize(t *testing.T) {
 
 func TestParseFretsPitchOrder(t *testing.T) {
 	// C chord pitch order: x 3 2 0 1 0 → E=muted, A=3, D=2, G=0, B=1, e=0
-	frets, err := ParseFrets("x 3 2 0 1 0", PitchOrder)
+	frets, err := ParseFrets("x 3 2 0 1 0")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestParseFretsPitchOrder(t *testing.T) {
 
 func TestParseFretsPitchOrderSpaceless(t *testing.T) {
 	// Same as above but spaceless
-	frets, err := ParseFrets("x32010", PitchOrder)
+	frets, err := ParseFrets("x32010")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,14 +57,14 @@ func TestParseFretsPitchOrderSpaceless(t *testing.T) {
 	}
 }
 
-func TestParseFretsStringOrder(t *testing.T) {
-	// C chord string-number order: 0 1 0 2 3 x → string1(e)=0, 2(B)=1, 3(G)=0, 4(D)=2, 5(A)=3, 6(E)=x
-	// In pitch order: [E=-1, A=3, D=2, G=0, B=1, e=0]
-	frets, err := ParseFrets("0 1 0 2 3 x", StringOrder)
+func TestParseFretsNeverReverses(t *testing.T) {
+	// Issue #48: string-number order was removed. Input is always read low to
+	// high (E A D G B e), so "0 1 0 2 3 x" is E=0 ... e=muted, not a C chord.
+	frets, err := ParseFrets("0 1 0 2 3 x")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	want := []int{-1, 3, 2, 0, 1, 0}
+	want := []int{0, 1, 0, 2, 3, -1}
 	for i, w := range want {
 		if frets[i] != w {
 			t.Errorf("frets[%d] = %d, want %d", i, frets[i], w)
@@ -83,7 +83,7 @@ func TestParseFretsErrors(t *testing.T) {
 		{"1 2 25 4 5 6", "out of range"},
 	}
 	for _, tt := range tests {
-		_, err := ParseFrets(tt.input, PitchOrder)
+		_, err := ParseFrets(tt.input)
 		if err == nil {
 			t.Errorf("ParseFrets(%q) expected error, got nil", tt.input)
 			continue
