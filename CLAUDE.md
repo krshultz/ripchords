@@ -74,7 +74,7 @@ Users can enter fret positions in two orderings:
 
 ### ASCII Tab Format
 
-Chord diagrams render with the highest-pitch string (e) on top, lowest (E) on the bottom. Each string is a horizontal line of hyphens; fret numbers are placed inline. Muted strings are `x`; open strings are `0`. Example (C chord):
+Chord diagrams render with the highest-pitch string (e) on top, lowest (E) on the bottom. Each string is a horizontal line of hyphens; fret numbers are placed inline. Muted strings are entered as `x` (either case) and render as `X`; open strings are `0`. Example (C chord):
 
 ```
     C
@@ -83,7 +83,7 @@ B |-----1------|
 G |-----0------|
 D |-----2------|
 A |-----3------|
-E |------------|
+E |-----X------|
 ```
 
-The low E string is not played in this voicing — it appears as a blank line (or can be marked `x`).
+The low E string is not played in this voicing, so it renders as `X`.
