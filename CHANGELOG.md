@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/krshultz/ripchords/compare/v0.2.4...v0.3.0) (2026-11-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* string-number fret input is gone. Anyone who used it must now type positions low to high (E A D G B e).
+
+### Features
+
+* accept fret input in pitch order only ([#65](https://github.com/krshultz/ripchords/issues/65)) ([eab24c8](https://github.com/krshultz/ripchords/commit/eab24c87786d73c8b4263ccffa63e3aaba4318c9)), closes [#48](https://github.com/krshultz/ripchords/issues/48)
+
 ## [0.2.4](https://github.com/krshultz/ripchords/compare/v0.2.3...v0.2.4) (2026-07-17)
 
 
