@@ -21,7 +21,7 @@ func feed(m model, keys ...tea.KeyMsg) model {
 
 func runes(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
 
-func key(t tea.KeyType) tea.KeyMsg { return tea.KeyMsg{Type: t} }
+func press(t tea.KeyType) tea.KeyMsg { return tea.KeyMsg{Type: t} }
 
 // renderedModel returns a model with two chords already entered, sitting at the
 // rendered (hotkeys-active) state.
@@ -46,11 +46,11 @@ func TestEditRenameFlow(t *testing.T) {
 	// the end, so typing "maj" appends to give "Gmaj". Enter -> back to rendered.
 	m = feed(m,
 		runes("e"),
-		key(tea.KeyDown),
-		key(tea.KeyEnter),
-		key(tea.KeyEnter),
+		press(tea.KeyDown),
+		press(tea.KeyEnter),
+		press(tea.KeyEnter),
 		runes("maj"),
-		key(tea.KeyEnter),
+		press(tea.KeyEnter),
 	)
 
 	if m.state != stateRendered {
@@ -71,11 +71,11 @@ func TestEditFretsFlow(t *testing.T) {
 	// Enter, type new frets, Enter.
 	m = feed(m,
 		runes("e"),
-		key(tea.KeyEnter),
-		key(tea.KeyDown),
-		key(tea.KeyEnter),
+		press(tea.KeyEnter),
+		press(tea.KeyDown),
+		press(tea.KeyEnter),
 		runes("x 0 2 2 2 0"), // A
-		key(tea.KeyEnter),
+		press(tea.KeyEnter),
 	)
 
 	if m.state != stateRendered {
@@ -100,11 +100,11 @@ func TestEditFretsParseErrorKeepsEditing(t *testing.T) {
 
 	m = feed(m,
 		runes("e"),
-		key(tea.KeyEnter),
-		key(tea.KeyDown),
-		key(tea.KeyEnter),
+		press(tea.KeyEnter),
+		press(tea.KeyDown),
+		press(tea.KeyEnter),
 		runes("nonsense"),
-		key(tea.KeyEnter),
+		press(tea.KeyEnter),
 	)
 
 	if m.state != stateEditFrets {
@@ -123,7 +123,7 @@ func TestEditFretsParseErrorKeepsEditing(t *testing.T) {
 
 func TestEditPickEscReturnsToRendered(t *testing.T) {
 	m := renderedModel(t)
-	m = feed(m, runes("e"), key(tea.KeyEsc))
+	m = feed(m, runes("e"), press(tea.KeyEsc))
 	if m.state != stateRendered {
 		t.Errorf("state = %d, want stateRendered (%d) after Esc from picker", m.state, stateRendered)
 	}
@@ -221,20 +221,106 @@ func TestResetWipeConfirmedClearsConfig(t *testing.T) {
 	}
 }
 
-// Issue #48: with the input-order row gone, barre is the first settings row,
-// so Space on the default cursor must toggle it.
-func TestSettingsSpaceTogglesBarre(t *testing.T) {
-	t.Setenv("HOME", t.TempDir()) // closing settings saves the config
+// Issue #48: with the input-order row gone, barre is the first options row,
+// so Space on the default cursor must toggle it. (#52: options opens on o.)
+func TestOptionsSpaceTogglesBarre(t *testing.T) {
+	t.Setenv("HOME", t.TempDir()) // closing options saves the config
 
 	m := renderedModel(t)
-	m = feed(m, runes("?"), key(tea.KeySpace), key(tea.KeyEsc))
+	m = feed(m, runes("o"), press(tea.KeySpace), press(tea.KeyEsc))
 	if m.state != stateRendered {
-		t.Fatalf("after closing settings, state = %d, want stateRendered (%d)", m.state, stateRendered)
+		t.Fatalf("after closing options, state = %d, want stateRendered (%d)", m.state, stateRendered)
 	}
 	if m.cfg.ShowBarre {
 		t.Error("ShowBarre = true after one toggle, want false")
 	}
 	if loadConfig().ShowBarre {
 		t.Error("toggled ShowBarre was not saved")
+	}
+}
+
+// #51/#52: ? and h both open the help screen from the progression view, and
+// Esc returns to it.
+func TestHelpKeysOpenAndCloseHelp(t *testing.T) {
+	for _, k := range []string{"?", "h"} {
+		m := renderedModel(t)
+		m = feed(m, runes(k))
+		if m.state != stateHelp {
+			t.Fatalf("after %q, state = %d, want stateHelp (%d)", k, m.state, stateHelp)
+		}
+		m = feed(m, press(tea.KeyEsc))
+		if m.state != stateRendered {
+			t.Errorf("after %q then Esc, state = %d, want stateRendered (%d)", k, m.state, stateRendered)
+		}
+	}
+}
+
+// #52: ? no longer opens options; o does.
+func TestQuestionMarkNoLongerOpensOptions(t *testing.T) {
+	m := feed(renderedModel(t), runes("?"))
+	if m.state == stateOptions {
+		t.Error("? opened options; it should open help")
+	}
+	m = feed(renderedModel(t), runes("o"))
+	if m.state != stateOptions {
+		t.Errorf("after o, state = %d, want stateOptions (%d)", m.state, stateOptions)
+	}
+}
+
+// At the prompts, o and ?/h only act as hotkeys while the input is empty.
+// Once something is typed, they're ordinary text (e.g. a chord name "Ch").
+func TestPromptHotkeysOnlyWhenEmpty(t *testing.T) {
+	t.Setenv("HOME", t.TempDir()) // closing options saves the config
+
+	m := newModel(Config{ShowBarre: true})
+	m = feed(m, runes("h"))
+	if m.state != stateHelp {
+		t.Fatalf("h at empty name prompt: state = %d, want stateHelp (%d)", m.state, stateHelp)
+	}
+	m = feed(m, press(tea.KeyEsc))
+	if m.state != stateChordName {
+		t.Fatalf("Esc from help: state = %d, want stateChordName (%d)", m.state, stateChordName)
+	}
+
+	m = feed(m, runes("o"))
+	if m.state != stateOptions {
+		t.Fatalf("o at empty name prompt: state = %d, want stateOptions (%d)", m.state, stateOptions)
+	}
+	m = feed(m, press(tea.KeyEsc))
+
+	m = feed(m, runes("C"), runes("h"), runes("o"))
+	if m.state != stateChordName {
+		t.Fatalf("typing after C: state = %d, want stateChordName (%d)", m.state, stateChordName)
+	}
+	if got := m.input.Value(); got != "Cho" {
+		t.Errorf("input = %q, want %q", got, "Cho")
+	}
+}
+
+// The -h usage text is generated from the same key map, so every hotkey
+// the editor matches must appear in it.
+func TestUsageTextListsEveryHotkey(t *testing.T) {
+	got := usageText()
+	for _, col := range keys.FullHelp() {
+		for _, kb := range col {
+			want := kb.Help().Key + " "
+			if !strings.Contains(got, "  "+want) {
+				t.Errorf("usageText() missing hotkey %q\n---\n%s", kb.Help().Key, got)
+			}
+		}
+	}
+}
+
+// The help bar must fit an 80-column terminal, including the two-space indent.
+func TestHelpBarFitsEightyColumns(t *testing.T) {
+	m := newModel(Config{ShowBarre: true})
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = next.(model)
+	bar := "  " + m.help.ShortHelpView(keys.ShortHelp())
+	if w := len([]rune(bar)); w > 80 {
+		t.Errorf("help bar is %d columns, want <= 80:\n%s", w, bar)
+	}
+	if strings.Contains(bar, "…") {
+		t.Errorf("help bar was truncated at 80 columns:\n%s", bar)
 	}
 }

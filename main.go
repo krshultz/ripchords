@@ -68,9 +68,7 @@ Flags:
   -h, --help      show this help and exit
 
 Editor hotkeys:
-  l   show the last chord        ?   open settings
-  r   reset the progression      q   quit
-`, resolveVersion())
+%s`, resolveVersion(), hotkeyUsage())
 }
 
 func expandPath(path string) string {

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -21,9 +23,10 @@ const (
 	stateFrets                       // waiting for fret positions
 	stateRendered                    // showing progression, hotkeys active
 	stateSave                        // waiting for filename
-	stateSettings                    // settings overlay
+	stateOptions                     // options overlay
 	stateLastChord                   // showing last chord modal
-	stateConfirmWipe                 // confirming a reset of saved settings
+	stateHelp                        // showing the full hotkey help
+	stateConfirmWipe                 // confirming a reset of saved options
 	stateEditPick                    // choosing which chord to edit
 	stateEditAction                  // choosing rename vs edit frets
 	stateEditName                    // entering a new name for the chosen chord
@@ -41,7 +44,8 @@ type model struct {
 	width       int
 	height      int
 	err         string
-	prev        appState // state to return to from settings
+	help        help.Model
+	prev        appState // state to return to from a modal (options, last chord, help)
 	editIdx     int      // index of the chord being edited
 }
 
@@ -59,6 +63,7 @@ func newModel(cfg Config) model {
 		cfg:    cfg,
 		state:  stateChordName,
 		input:  ti,
+		help:   newHelp(),
 		width:  80,
 		height: 24,
 	}
@@ -74,6 +79,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		m.help.Width = msg.Width
 		return m, nil
 	case tea.KeyMsg:
 		return m.handleKey(msg)
@@ -99,10 +105,12 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleRendered(msg)
 	case stateSave:
 		return m.handleSave(msg)
-	case stateSettings:
-		return m.handleSettings(msg)
+	case stateOptions:
+		return m.handleOptions(msg)
 	case stateLastChord:
 		return m.handleLastChord(msg)
+	case stateHelp:
+		return m.handleHelp(msg)
 	case stateEditPick:
 		return m.handleEditPick(msg)
 	case stateEditAction:
@@ -134,20 +142,8 @@ func (m model) handleChordName(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	if m.input.Value() == "" {
-		switch msg.String() {
-		case "?":
-			m.prev = m.state
-			m.state = stateSettings
-			m.cursor = 0
-			return m, nil
-		case "l":
-			if m.session.Len() > 0 {
-				m.prev = m.state
-				m.state = stateLastChord
-				return m, nil
-			}
-		case "q":
-			return m, tea.Quit
+		if next, cmd, ok := m.promptHotkey(msg); ok {
+			return next, cmd
 		}
 	}
 	var cmd tea.Cmd
@@ -178,20 +174,8 @@ func (m model) handleFrets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, textinput.Blink
 	}
 	if m.input.Value() == "" {
-		switch msg.String() {
-		case "?":
-			m.prev = m.state
-			m.state = stateSettings
-			m.cursor = 0
-			return m, nil
-		case "l":
-			if m.session.Len() > 0 {
-				m.prev = m.state
-				m.state = stateLastChord
-				return m, nil
-			}
-		case "q":
-			return m, tea.Quit
+		if next, cmd, ok := m.promptHotkey(msg); ok {
+			return next, cmd
 		}
 	}
 	var cmd tea.Cmd
@@ -200,29 +184,29 @@ func (m model) handleFrets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) handleRendered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "ctrl+c", "q":
+	switch {
+	case key.Matches(msg, keys.Quit):
 		return m, tea.Quit
-	case "l":
+	case key.Matches(msg, keys.Last):
 		if m.session.Len() > 0 {
 			m.prev = m.state
 			m.state = stateLastChord
 			return m, nil
 		}
-	case "a":
+	case key.Matches(msg, keys.Add):
 		m.state = stateChordName
 		m.input.Prompt = chordNamePrompt(m.session.Len())
 		m.input.SetValue("")
 		m.err = ""
 		return m, textinput.Blink
-	case "e":
+	case key.Matches(msg, keys.Edit):
 		if m.session.Len() > 0 {
 			m.state = stateEditPick
 			m.cursor = 0
 			m.err = ""
 		}
 		return m, nil
-	case "s":
+	case key.Matches(msg, keys.Save):
 		if m.session.Len() == 0 {
 			return m, nil
 		}
@@ -231,23 +215,52 @@ func (m model) handleRendered(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.input.SetValue("")
 		m.err = ""
 		return m, textinput.Blink
-	case "r":
+	case key.Matches(msg, keys.Reset):
 		now := time.Now()
 		if !m.lastR.IsZero() && now.Sub(m.lastR) <= 500*time.Millisecond {
 			// Second quick r: don't reset yet — ask for confirmation first, so
-			// an accidental double-tap can't throw away the saved settings.
+			// an accidental double-tap can't throw away the saved options.
 			m.lastR = time.Time{}
 			m.state = stateConfirmWipe
 		} else {
 			m.lastR = now
 			m.session.Reset()
 		}
-	case "?":
+	case key.Matches(msg, keys.Options):
 		m.prev = m.state
-		m.state = stateSettings
+		m.state = stateOptions
 		m.cursor = 0
+	case key.Matches(msg, keys.Help):
+		m.prev = m.state
+		m.state = stateHelp
 	}
 	return m, nil
+}
+
+// promptHotkey handles the hotkeys that also work at the name and fret
+// prompts while the input line is empty. ok is false when msg isn't one of
+// them, so the caller should pass the key on to the text input.
+func (m model) promptHotkey(msg tea.KeyMsg) (next tea.Model, cmd tea.Cmd, ok bool) {
+	switch {
+	case key.Matches(msg, keys.Options):
+		m.prev = m.state
+		m.state = stateOptions
+		m.cursor = 0
+		return m, nil, true
+	case key.Matches(msg, keys.Help):
+		m.prev = m.state
+		m.state = stateHelp
+		return m, nil, true
+	case key.Matches(msg, keys.Last):
+		if m.session.Len() > 0 {
+			m.prev = m.state
+			m.state = stateLastChord
+			return m, nil, true
+		}
+	case key.Matches(msg, keys.Quit):
+		return m, tea.Quit, true
+	}
+	return m, nil, false
 }
 
 func (m model) handleConfirmWipe(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -310,9 +323,9 @@ func (m model) handleSave(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-var settingsLabels = []string{"Show barre chords"}
+var optionLabels = []string{"Show barre chords"}
 
-func (m model) handleSettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m model) handleOptions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyCtrlC:
 		return m, tea.Quit
@@ -328,7 +341,7 @@ func (m model) handleSettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor--
 		}
 	case tea.KeyDown:
-		if m.cursor < len(settingsLabels)-1 {
+		if m.cursor < len(optionLabels)-1 {
 			m.cursor++
 		}
 	case tea.KeySpace:
@@ -350,6 +363,20 @@ func (m model) handleLastChord(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, textinput.Blink
 		}
 		return m, nil
+	}
+	return m, nil
+}
+
+// handleHelp closes the help screen on Esc, Enter, or the help key itself.
+func (m model) handleHelp(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyCtrlC {
+		return m, tea.Quit
+	}
+	if msg.Type == tea.KeyEsc || msg.Type == tea.KeyEnter || key.Matches(msg, keys.Help) {
+		m.state = m.prev
+		if m.prev == stateChordName || m.prev == stateFrets || m.prev == stateSave {
+			return m, textinput.Blink
+		}
 	}
 	return m, nil
 }
@@ -467,8 +494,10 @@ func (m model) View() string {
 	switch m.state {
 	case stateConfirmWipe:
 		return m.viewConfirmWipe()
-	case stateSettings:
-		return m.viewSettings()
+	case stateOptions:
+		return m.viewOptions()
+	case stateHelp:
+		return m.viewHelp()
 	case stateLastChord:
 		return m.viewLastChord()
 	case stateEditPick:
@@ -537,13 +566,13 @@ func (m model) viewConfirmWipe() string {
 	var b strings.Builder
 	b.WriteString(m.viewHeader())
 	b.WriteString("\n")
-	b.WriteString("  Reset all settings to their defaults?\n")
+	b.WriteString("  Reset all options to their defaults?\n")
 	b.WriteString("  This also clears the progression.\n")
 	b.WriteString("\n  y reset   n / Esc cancel\n")
 	return b.String()
 }
 
-func (m model) viewSettings() string {
+func (m model) viewOptions() string {
 	var b strings.Builder
 	b.WriteString(m.viewHeader())
 	b.WriteString("\n")
@@ -557,7 +586,7 @@ func (m model) viewSettings() string {
 		b.WriteString("\n")
 	}
 
-	b.WriteString("  Settings\n")
+	b.WriteString("  Options\n")
 	b.WriteString("  " + strings.Repeat("─", 38) + "\n")
 
 	barreVal := "off"
@@ -566,7 +595,7 @@ func (m model) viewSettings() string {
 	}
 	values := []string{barreVal}
 
-	for i, label := range settingsLabels {
+	for i, label := range optionLabels {
 		prefix := "    "
 		if i == m.cursor {
 			prefix = "  > "
@@ -588,7 +617,21 @@ func (m model) viewLastChord() string {
 }
 
 func (m model) viewHeader() string {
-	return "ripchords  |  l last chord  |  ? settings  |  r reset  |  q quit\n"
+	return "ripchords  |  ? help  |  q quit\n"
+}
+
+func (m model) viewHelp() string {
+	var b strings.Builder
+	b.WriteString(m.viewHeader())
+	b.WriteString("\n  Hotkeys\n")
+	b.WriteString("  " + strings.Repeat("─", 38) + "\n")
+	for _, line := range strings.Split(m.help.FullHelpView(keys.FullHelp()), "\n") {
+		b.WriteString("  " + line + "\n")
+	}
+	b.WriteString("\n  o, ?/h, l and q also work at the name and fret prompts\n")
+	b.WriteString("  while the input line is empty. Esc backs out of a prompt.\n")
+	b.WriteString("\n  Esc to close\n")
+	return b.String()
 }
 
 func (m model) viewMain() string {
@@ -622,7 +665,7 @@ func (m model) viewMain() string {
 		if m.session.Len() == 0 {
 			b.WriteString("  (progression cleared)\n\n")
 		}
-		b.WriteString("  a add chord  e edit chord  l last chord  s save  r reset  rr reset settings  ? settings  q quit\n")
+		b.WriteString("  " + m.help.ShortHelpView(keys.ShortHelp()) + "\n")
 	case stateSave:
 		b.WriteString(m.input.View() + "\n")
 	case stateEditName:
