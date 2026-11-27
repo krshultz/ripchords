@@ -67,10 +67,23 @@ B |-----1------|
 G |-----0------|
 D |-----2------|
 A |-----3------|
-E |------------|
+E |-----X------|
 ```
 
+Type `x` for a string you don't play; it shows as `X` in the diagram. Fret positions
+can be space-separated (`x 3 2 0 1 0`) or run together (`x32010`). Frets of 10 and
+above need the spaces (`x 10 12 12 11 10`).
+
 Keep going to build a progression. Press `s` to save it to a file when you're done.
+Saving **appends** to the file if it already exists, so you can collect several
+progressions in one file. A leading `~/` in the filename means your home directory.
+
+## Command-line flags
+
+| Flag                  | Action                       |
+|-----------------------|------------------------------|
+| `-h`, `--help`, `-?`  | Show usage and exit          |
+| `-v`, `--version`     | Print the version and exit   |
 
 ## Hotkeys
 
