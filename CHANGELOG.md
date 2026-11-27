@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/krshultz/ripchords/compare/v0.3.0...v0.4.0) (2026-11-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* ? now opens help instead of settings. Options (formerly settings) moved to o.
+
+### Features
+
+* help screen on ?/h, options on o ([#67](https://github.com/krshultz/ripchords/issues/67)) ([49b2911](https://github.com/krshultz/ripchords/commit/49b291187a6446dad13f47c6cef868f415ebb674)), closes [#51](https://github.com/krshultz/ripchords/issues/51) [#52](https://github.com/krshultz/ripchords/issues/52)
+
 ## [0.3.0](https://github.com/krshultz/ripchords/compare/v0.2.4...v0.3.0) (2026-11-27)
 
 
