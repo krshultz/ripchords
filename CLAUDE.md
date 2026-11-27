@@ -52,7 +52,7 @@ Config lives in `release-please-config.json`; current version is tracked in
 
 Standard tuning from lowest to highest pitch: `E A D G B e`
 
-Strings have two numbering conventions that both need to be supported:
+Strings have two numbering conventions:
 
 | String number | Note | Pitch order |
 |---------------|------|-------------|
@@ -65,12 +65,11 @@ Strings have two numbering conventions that both need to be supported:
 
 String numbers are "inverted" relative to pitch: string 6 is the lowest pitch. This is a source of confusion — the codebase should be explicit about which convention is in use at any given boundary.
 
-### Input Modes
+### Input Order
 
-Users can enter fret positions in two orderings:
+Fret positions are entered in **pitch order** only (low to high): positions for strings 6, 5, 4, 3, 2, 1 in that sequence. C chord: `X 3 2 0 1 0`. `core.ParseFrets` returns them in the same order (index 0 = low E).
 
-- **Pitch order** (low to high): positions for strings 6, 5, 4, 3, 2, 1 in that sequence. C chord: `X 3 2 0 1 0`
-- **String-number order** (string 1 to 6): positions for strings 1, 2, 3, 4, 5, 6. C chord: `0 1 0 2 3 X`
+String-number order (string 1 to 6) was supported until #48 and has been removed. Older `~/.ripchords/config.json` files may still contain an `input_order` field; it is ignored on load and dropped on the next save.
 
 ### ASCII Tab Format
 

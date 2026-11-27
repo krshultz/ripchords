@@ -16,10 +16,10 @@ type Session struct {
 // Len reports how many chords are in the progression.
 func (s *Session) Len() int { return len(s.Chords) }
 
-// Add parses fretInput in the given order, appends the resulting chord, and
+// Add parses fretInput (pitch order), appends the resulting chord, and
 // returns it. The progression is left unchanged if parsing fails.
-func (s *Session) Add(name, fretInput string, order InputOrder) (Chord, error) {
-	frets, err := ParseFrets(fretInput, order)
+func (s *Session) Add(name, fretInput string) (Chord, error) {
+	frets, err := ParseFrets(fretInput)
 	if err != nil {
 		return Chord{}, err
 	}
@@ -50,12 +50,12 @@ func (s *Session) Rename(i int, name string) error {
 }
 
 // EditFrets replaces the fret positions of the chord at index i, parsing
-// fretInput in the given order. The chord is left unchanged if parsing fails.
-func (s *Session) EditFrets(i int, fretInput string, order InputOrder) error {
+// fretInput (pitch order). The chord is left unchanged if parsing fails.
+func (s *Session) EditFrets(i int, fretInput string) error {
 	if i < 0 || i >= len(s.Chords) {
 		return fmt.Errorf("chord index %d out of range (have %d)", i, len(s.Chords))
 	}
-	frets, err := ParseFrets(fretInput, order)
+	frets, err := ParseFrets(fretInput)
 	if err != nil {
 		return err
 	}

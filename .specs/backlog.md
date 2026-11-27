@@ -72,20 +72,11 @@
   toward a toggle (one per row vs. in series) over full customization.
 
 ## Settings flow — remaining
-* Remove string-number input order — keep pitch order only (#48). String-number ordering
-  (string 1→6) is rarely used; standard notation is pitch order (E A D G B e). Drop the
-  `StringOrder` option, the first-run "choose input order" step, and the settings toggle,
-  leaving pitch order as the sole behavior. Touches `core/chord.go`
-  (`InputOrder`/`StringOrder`, `ParseFrets`), `core/session.go` (`Add`/`EditFrets`
-  signatures), `main.go` (`Config.InputOrder` / `input_order` JSON), and `tui.go`
-  (`stateFirstRun`, `settingsLabels`, the order toggle, and display strings). Consider how
-  existing persisted `input_order` config values are handled on load (migrate/ignore).
 * Show fret positions below each diagram (#45). A settings toggle (off by default) that
   prints each chord's positions under its diagram so pasted output is self-documenting.
   Depends on the fret formatter from #44.
 * New settings can be added over time; the toggle-based settings overlay already
-  accommodates this. (Show-barre toggle is done; the input-order toggle is being removed
-  — see above.)
+  accommodates this. (Show-barre is the only toggle today; input order was removed in #48.)
 
 ## Longer term goals
 * Show the relative minor/major of a chord (#55). Added 07-13-2026: display the relative
@@ -103,6 +94,10 @@
 * Display the chords in a progression by name (#60), e.g. "A minor --> C major --> DSus2".
 
 ## Recently shipped
+* Pitch order only (#48). String-number input order is gone, along with first-run setup
+  (barre display defaults to on and is changed in settings). `rr` now resets settings to
+  their defaults. Old config files with `input_order` still load; the field is ignored and
+  dropped on the next save.
 * Misaligned output when frets mix single- and double-digit numbers (#33, fixed in #35,
   released in 0.2.4). Every fret cell is now padded to the width of the widest fret in the
   diagram so the closing `|` aligns across strings.

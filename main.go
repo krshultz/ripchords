@@ -13,8 +13,6 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-
-	"github.com/krshultz/ripchords/core"
 )
 
 // version is stamped at build time via -ldflags "-X main.version=...".
@@ -84,9 +82,11 @@ func expandPath(path string) string {
 	return path
 }
 
+// Config is the user's saved preferences in ~/.ripchords/config.json.
+// Config files written before #48 also hold an "input_order" field; the JSON
+// decoder ignores it, and the next saveConfig drops it from the file.
 type Config struct {
-	InputOrder core.InputOrder `json:"input_order,omitempty"`
-	ShowBarre  bool            `json:"show_barre"`
+	ShowBarre bool `json:"show_barre"`
 }
 
 func configPath() string {

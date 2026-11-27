@@ -6,7 +6,7 @@ import "testing"
 // Used for known-good setup where a parse failure means the test itself is broken.
 func mustAdd(t *testing.T, s *Session, name, frets string) {
 	t.Helper()
-	if _, err := s.Add(name, frets, PitchOrder); err != nil {
+	if _, err := s.Add(name, frets); err != nil {
 		t.Fatalf("setup Add(%q, %q): %v", name, frets, err)
 	}
 }
@@ -20,7 +20,7 @@ func TestSessionAddAndLast(t *testing.T) {
 		t.Errorf("Last() on empty session ok = true, want false")
 	}
 
-	c, err := s.Add("  C  ", "x 3 2 0 1 0", PitchOrder)
+	c, err := s.Add("  C  ", "x 3 2 0 1 0")
 	if err != nil {
 		t.Fatalf("Add returned error: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestSessionAddAndLast(t *testing.T) {
 
 func TestSessionAddParseErrorLeavesProgressionUnchanged(t *testing.T) {
 	var s Session
-	if _, err := s.Add("bad", "1 2 3", PitchOrder); err == nil {
+	if _, err := s.Add("bad", "1 2 3"); err == nil {
 		t.Fatal("Add with too few positions: expected error, got nil")
 	}
 	if s.Len() != 0 {
@@ -74,7 +74,7 @@ func TestSessionEditFrets(t *testing.T) {
 	var s Session
 	mustAdd(t, &s, "C", "x32010")
 
-	if err := s.EditFrets(0, "x 3 2 0 1 3", PitchOrder); err != nil {
+	if err := s.EditFrets(0, "x 3 2 0 1 3"); err != nil {
 		t.Fatalf("EditFrets returned error: %v", err)
 	}
 	want := []int{-1, 3, 2, 0, 1, 3}
@@ -85,14 +85,14 @@ func TestSessionEditFrets(t *testing.T) {
 	}
 
 	// Bad input leaves the chord unchanged.
-	if err := s.EditFrets(0, "nope", PitchOrder); err == nil {
+	if err := s.EditFrets(0, "nope"); err == nil {
 		t.Error("EditFrets with bad input: expected error, got nil")
 	}
 	if s.Chords[0].Frets[5] != 3 {
 		t.Errorf("failed EditFrets mutated chord: frets[5] = %d, want 3", s.Chords[0].Frets[5])
 	}
 
-	if err := s.EditFrets(-1, "x32010", PitchOrder); err == nil {
+	if err := s.EditFrets(-1, "x32010"); err == nil {
 		t.Error("EditFrets out of range: expected error, got nil")
 	}
 }

@@ -13,16 +13,6 @@ import (
 // NumStrings is the number of strings on a standard guitar.
 const NumStrings = 6
 
-// InputOrder controls how fret positions are interpreted on input.
-type InputOrder string
-
-// Input-order values: PitchOrder reads positions low-to-high pitch
-// (E A D G B e); StringOrder reads them by string number (string 1 to 6).
-const (
-	PitchOrder  InputOrder = "pitch"
-	StringOrder InputOrder = "string_number"
-)
-
 // Chord holds a name and fret positions in pitch order (index 0 = low E, index 5 = high e).
 type Chord struct {
 	Name  string
@@ -43,10 +33,11 @@ func tokenize(input string) []string {
 	return tokens
 }
 
-// ParseFrets parses a fret-position string and returns values in pitch order
+// ParseFrets parses a fret-position string given in pitch order, low to high
+// (E A D G B e), and returns the values in that same order
 // (index 0 = string 6 = low E, index 5 = string 1 = high e).
 // -1 means muted/not played.
-func ParseFrets(input string, order InputOrder) ([]int, error) {
+func ParseFrets(input string) ([]int, error) {
 	tokens := tokenize(input)
 	if len(tokens) != NumStrings {
 		if len(tokens) > NumStrings {
@@ -74,11 +65,6 @@ func ParseFrets(input string, order InputOrder) ([]int, error) {
 			return nil, fmt.Errorf("position %d: fret %d is out of range (valid: 0–24)", i+1, n)
 		}
 		frets[i] = n
-	}
-	if order == StringOrder {
-		for i, j := 0, NumStrings-1; i < j; i, j = i+1, j-1 {
-			frets[i], frets[j] = frets[j], frets[i]
-		}
 	}
 	return frets, nil
 }
