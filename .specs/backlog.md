@@ -11,30 +11,9 @@
 * (none currently — see GitHub issues for anything new)
 
 ## Prompt enhancements still open
-* `(h)` help hotkey inside the editor (#51). The CLI usage screen now exists (shown for
-  `-h`/`--help`/`-?`/invalid flags); what remains is surfacing it as an in-editor `h`
-  hotkey alongside `l`, `?`, `r`, `q`.
-* Settings hotkey binding (#52): the original spec called for `(s)` to open settings. Today
-  `?` opens settings and `s` is bound to "save." Decide on the final bindings.
-
-  Example prompt the spec was aiming for, once a chord has been added:
-  ```
-  Ripchords v0.0.1
-  Hotkeys:
-  --> (s) opens settings
-  --> (l) last chord in progression
-  --> (p) prints current progression
-  --> (h) help
-  --> (r) reset progression and start over
-  Num chords: 1
-  Next chord name? (Enter to skip):
-  ```
-
-  Note: the progression is already shown live above the prompt, so a dedicated `(p)`
-  "print progression" hotkey may be redundant — decide whether it's still wanted.
 * Show which chord is being worked on when adding or editing (#37). Name the pending chord
   on the add-frets prompt; on the edit-frets prompt show the current positions in place of
-  the `(E A D G B e)` guide line once #48 lands.
+  the `(E A D G B e)` guide line (#48 has landed, so the guide line is now fixed).
 * Make Rename discoverable (#46). Rename already works (`e` → pick chord → Rename) but the
   help bar only says `e edit chord`. Surface it in the help bar, `-h` usage text, and README.
 * Reprint the fret positions the user entered (#44). Show a chord's positions as text
@@ -71,11 +50,11 @@
   option to print one chord per row for easier copy/paste of a single chord. Leaning
   toward a toggle (one per row vs. in series) over full customization.
 
-## Settings flow — remaining
-* Show fret positions below each diagram (#45). A settings toggle (off by default) that
+## Options flow — remaining
+* Show fret positions below each diagram (#45). An options toggle (off by default) that
   prints each chord's positions under its diagram so pasted output is self-documenting.
   Depends on the fret formatter from #44.
-* New settings can be added over time; the toggle-based settings overlay already
+* New options can be added over time; the toggle-based options overlay already
   accommodates this. (Show-barre is the only toggle today; input order was removed in #48.)
 
 ## Longer term goals
@@ -94,6 +73,10 @@
 * Display the chords in a progression by name (#60), e.g. "A minor --> C major --> DSus2".
 
 ## Recently shipped
+* Hotkeys settled and in-editor help (#51, #52). `?` and `h` open a full hotkey help
+  screen; `o` opens **Options** (renamed from Settings); `s` stays save; no `p` hotkey.
+  The help bar, help screen and `-h` usage text are all generated from one key map
+  (`keys.go`, using `bubbles/help`), so they can't drift apart.
 * Pitch order only (#48). String-number input order is gone, along with first-run setup
   (barre display defaults to on and is changed in settings). `rr` now resets settings to
   their defaults. Old config files with `input_order` still load; the field is ignored and

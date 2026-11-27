@@ -90,13 +90,14 @@ From the progression view:
 | `e`  | Edit a chord you already entered — rename it or fix its frets   |
 | `l`  | Show the last chord on its own                                  |
 | `s`  | Save the progression to a file                                  |
-| `r`  | Reset the progression (clears chords, keeps your settings)      |
-| `rr` | Double-tap `r` to reset settings to their defaults (asks first) |
-| `?`  | Open settings (barre rendering)                                 |
+| `r`  | Reset the progression (clears chords, keeps your options)       |
+| `rr` | Double-tap `r` to reset options to their defaults (asks first)  |
+| `o`  | Open options (barre rendering)                                  |
+| `?` or `h` | Show all hotkeys                                          |
 | `q`  | Quit                                                            |
 
-`l`, `?`, and `q` also work at the name/fret prompts when the input line is empty,
-and `Esc` backs out of a prompt.
+`l`, `o`, `?`/`h`, and `q` also work at the name/fret prompts when the input line is
+empty, and `Esc` backs out of a prompt.
 
 ## Contributing
 
