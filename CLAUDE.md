@@ -13,6 +13,24 @@ Check it at the start of a session to see what's outstanding. When an item ships
 main) it moves to the "Recently shipped" section at the bottom of the backlog — not deleted —
 so what remains above is open work or deviations from the original spec.
 
+## Keep Documentation in Sync (required)
+
+Every change to ripchords updates the docs it affects **in the same PR**, not a follow-up. A
+PR isn't done until these match the new behavior:
+
+- **`.specs/backlog.md`**: move shipped items to "Recently shipped" and fix any open item whose
+  wording the change makes stale (e.g. "once #48 lands").
+- **`README.md`**: usage, hotkeys table, flags, examples and rendered diagrams.
+- **`CLAUDE.md`** (this file): domain notes, examples, and anything that describes how the code
+  works.
+- **`CONTRIBUTING.md`**: if tooling, branch rules or commit conventions change.
+- **In-app text**: the `-h` usage text and help screen come from `keys.go`; prompts, header
+  and modal footers in `tui.go` are hand-written and need checking by hand.
+
+Before committing, grep the docs for terms the change touches (old key names, removed options,
+renamed screens) and verify each claim against the code or the built binary. Don't edit
+`CHANGELOG.md`; release-please writes it.
+
 ## Commands
 
 ```bash
